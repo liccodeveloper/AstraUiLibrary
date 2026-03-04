@@ -583,7 +583,7 @@ function Library:_Createv0rtexdControls()
     end)
 
     closeBtn.MouseEnter:Connect(function()
-        closeBtn.ImageColor3 = Color3.fromRGB(255
+        closeBtn.ImageColor3 = Color3.fromRGB(255, 100, 100)
     end)
 
     closeBtn.MouseLeave:Connect(function()
@@ -665,7 +665,7 @@ function Library:_SetupSmartResize(handle)
 
     handle.MouseLeave:Connect(function()
         if not resizing then
-            handle.ImageColor3 = Color3.fromRGB(110
+            handle.ImageColor3 = Color3.fromRGB(110, 110, 110)
         end
     end)
 
@@ -681,7 +681,7 @@ function Library:_SetupSmartResize(handle)
             connection = input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     resizing = false
-                    handle.ImageColor3 = Color3.fromRGB(110
+                    handle.ImageColor3 = Color3.fromRGB(110, 110, 110)
                     if connection then
                         connection:Disconnect()
                     end
@@ -1587,10 +1587,10 @@ function Library._CreateToggle(tab, config)
     local function UpdateToggle()
         if enabled then
             switchBg.BackgroundColor3 = c.Toggle.Enabled
-            switchCircle.Position = UDim2.new(0
+            switchCircle.Position = UDim2.new(0, 21, 0.5, 0)
         else
             switchBg.BackgroundColor3 = c.Toggle.Disabled
-            switchCircle.Position = UDim2.new(0
+            switchCircle.Position = UDim2.new(0, 4, 0.5, 0)
         end
     end
 
@@ -1699,7 +1699,7 @@ function Library._CreateCheckbox(tab, config)
     -- Hover effect
     button.MouseEnter:Connect(function()
         if not enabled then
-            checkStroke.Color = Color3.fromRGB(90
+            checkStroke.Color = Color3.fromRGB(90, 90, 90)
         end
     end)
 
