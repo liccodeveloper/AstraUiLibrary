@@ -1496,20 +1496,7 @@ function Library._CreateCheckbox(tab, config)
         Parent = checkBg
     })
 
-    -- Check mark (✓) label inside the box
-    local checkMark = CreateInstance("TextLabel", {
-        Name = "CheckMark",
-        Text = "✓",
-        Font = Enum.Font.GothamBold,
-        TextColor3 = c.Checkbox.Check,
-        TextSize = 13,
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
-        TextXAlignment = Enum.TextXAlignment.Center,
-        TextYAlignment = Enum.TextYAlignment.Center,
-        Visible = enabled,
-        Parent = checkBg
-    })
+    -- Check mark removido — só a cor branca indica que está marcado
 
     local button = CreateInstance("TextButton", {
         Name = "Button",
@@ -1523,11 +1510,9 @@ function Library._CreateCheckbox(tab, config)
         if enabled then
             CreateTween(checkBg, {BackgroundColor3 = c.Checkbox.Enabled}, animationspeed.Normal)
             CreateTween(checkStroke, {Color = c.Checkbox.Enabled}, animationspeed.Normal)
-            checkMark.Visible = true
         else
             CreateTween(checkBg, {BackgroundColor3 = c.Checkbox.Disabled}, animationspeed.Normal)
             CreateTween(checkStroke, {Color = c.Checkbox.Border}, animationspeed.Normal)
-            checkMark.Visible = false
         end
     end
 
