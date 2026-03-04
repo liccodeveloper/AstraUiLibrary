@@ -230,19 +230,27 @@ local function CreateNotificationContainer(screenGui)
     return NotificationContainer
 end
 
-function Library.new(title, configFolder)
+function Library.new(title, configFolder, sizeConfig)
     local self = setmetatable({}, Library)
     self.title = title or "Astra"
     self.configFolder = configFolder or title or "Astra"
+
+    -- Size config: { Default, Min, Max } each being {Width, Height}
+    local sc = sizeConfig or {}
+    local def = sc.Default or {}
+    local mn  = sc.Min or {}
+    local mx  = sc.Max or {}
+
+    self._defaultSize = Vector2.new(def.Width or s.v0rtexd.Width,    def.Height or s.v0rtexd.Height)
+    self._minSize     = Vector2.new(mn.Width  or s.Minv0rtexd.Width, mn.Height  or s.Minv0rtexd.Height)
+    self._maxSize     = Vector2.new(mx.Width  or s.Maxv0rtexd.Width, mx.Height  or s.Maxv0rtexd.Height)
     self.sections = {}
     self.currentTab = nil
     self.minimized = false
     self._keybinds = {}
     self._toggleKey = Enum.KeyCode.RightControl
     self._visible = true
-    self._originalHeight = s.v0rtexd.Height
-    self._minSize = Vector2.new(s.Minv0rtexd.Width, s.Minv0rtexd.Height)
-    self._maxSize = Vector2.new(s.Maxv0rtexd.Width, s.Maxv0rtexd.Height)
+    self._originalHeight = self._defaultSize.Y
     self._mobileToggle = nil
     self._configElements = {}
     self._autoSave = false
@@ -426,9 +434,9 @@ function Library:_CreateMainv0rtexd()
         Name = "Container",
         BackgroundColor3 = c.Background,
         BackgroundTransparency = 0,
-        Position = UDim2.new(0.5, -s.v0rtexd.Width / 2, 0.5, -s.v0rtexd.Height / 2),
+        Position = UDim2.new(0.5, -self._defaultSize.X / 2, 0.5, -self._defaultSize.Y / 2),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, s.v0rtexd.Width, 0, s.v0rtexd.Height),
+        Size = UDim2.new(0, self._defaultSize.X, 0, self._defaultSize.Y),
         ClipsDescendants = false,
         Parent = self.screenGui
     })
@@ -499,11 +507,11 @@ function Library:_Createv0rtexdControls()
     end)
 
     minimizeBtn.MouseEnter:Connect(function()
-        CreateTween(minimizeBtn, {ImageColor3 = c.Text}, animationspeed.Fast)
+        minimizeBtn.ImageColor3 = c.Text
     end)
 
     minimizeBtn.MouseLeave:Connect(function()
-        CreateTween(minimizeBtn, {ImageColor3 = c.TextDark}, animationspeed.Fast)
+        minimizeBtn.ImageColor3 = c.TextDark
     end)
 
     local closeBtn = CreateInstance("ImageButton", {
@@ -522,11 +530,11 @@ function Library:_Createv0rtexdControls()
     end)
 
     closeBtn.MouseEnter:Connect(function()
-        CreateTween(closeBtn, {ImageColor3 = Color3.fromRGB(255, 100, 100)}, animationspeed.Fast)
+        closeBtn.ImageColor3 = Color3.fromRGB(255
     end)
 
     closeBtn.MouseLeave:Connect(function()
-        CreateTween(closeBtn, {ImageColor3 = c.TextDark}, animationspeed.Fast)
+        closeBtn.ImageColor3 = c.TextDark
     end)
 
     local resizeBtn = CreateInstance("ImageButton", {
@@ -599,12 +607,12 @@ function Library:_SetupSmartResize(handle)
     local resizeStart, startSize, startPos
 
     handle.MouseEnter:Connect(function()
-        CreateTween(handle, {ImageColor3 = c.Text}, animationspeed.Fast)
+        handle.ImageColor3 = c.Text
     end)
 
     handle.MouseLeave:Connect(function()
         if not resizing then
-            CreateTween(handle, {ImageColor3 = Color3.fromRGB(110, 110, 110)}, animationspeed.Fast)
+            handle.ImageColor3 = Color3.fromRGB(110
         end
     end)
 
@@ -620,7 +628,7 @@ function Library:_SetupSmartResize(handle)
             connection = input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     resizing = false
-                    CreateTween(handle, {ImageColor3 = Color3.fromRGB(110, 110, 110)}, animationspeed.Fast)
+                    handle.ImageColor3 = Color3.fromRGB(110
                     if connection then
                         connection:Disconnect()
                     end
@@ -643,19 +651,13 @@ end
 function Library:_ToggleMinimize()
     self.minimized = not self.minimized
     if self.minimized then
-        CreateTween(self.mainContent, {Size = UDim2.new(1, 0, 0, 0)}, animationspeed.Slow)
-        CreateTween(self.container, {Size = UDim2.new(0, self.container.AbsoluteSize.X, 0, 45)}, animationspeed.Slow)
-        if self.resizeBtn then
-            self.resizeBtn.Visible = false
-        end
+        self.mainContent.Size = UDim2.new(1, 0, 0, 0)
+        self.container.Size = UDim2.new(0, self.container.AbsoluteSize.X, 0, 45)
+        if self.resizeBtn then self.resizeBtn.Visible = false end
     else
-        CreateTween(self.container, {Size = UDim2.new(0, self.container.AbsoluteSize.X, 0, self._originalHeight)}, animationspeed.Slow)
-        task.delay(0.1, function()
-            CreateTween(self.mainContent, {Size = UDim2.new(1, 0, 1, -46)}, animationspeed.Normal)
-        end)
-        if self.resizeBtn then
-            self.resizeBtn.Visible = true
-        end
+        self.container.Size = UDim2.new(0, self.container.AbsoluteSize.X, 0, self._originalHeight)
+        self.mainContent.Size = UDim2.new(1, 0, 1, -46)
+        if self.resizeBtn then self.resizeBtn.Visible = true end
     end
 end
 
@@ -893,7 +895,7 @@ function Library:CreateSection(name)
 
     local function ToggleSection()
         section.expanded = not section.expanded
-        CreateTween(arrow, {Rotation = section.expanded and 0 or 180}, animationspeed.Normal)
+        arrow.Rotation = section.expanded and 0 or 180
         tabsContainer.Visible = section.expanded
     end
 
@@ -993,13 +995,13 @@ function Library._CreateTab(section, name, icon)
 
     clickBtn.MouseEnter:Connect(function()
         if section._library.currentTab ~= tab then
-            CreateTween(tabBtn, {BackgroundTransparency = 0.7}, animationspeed.Fast)
+            tabBtn.BackgroundTransparency = 0.7
         end
     end)
 
     clickBtn.MouseLeave:Connect(function()
         if section._library.currentTab ~= tab then
-            CreateTween(tabBtn, {BackgroundTransparency = 1}, animationspeed.Fast)
+            tabBtn.BackgroundTransparency = 1
         end
     end)
 
@@ -1054,6 +1056,10 @@ function Library._CreateTab(section, name, icon)
         return Library._CreateRadioGroup(self, config)
     end
 
+    function tabMethods:CreateRadioGroup(config)
+        return Library._CreateRadioGroup(self, config)
+    end
+
     function tabMethods:CreateDropdown(config)
         return Library._CreateDropdown(self, config)
     end
@@ -1080,8 +1086,8 @@ end
 function Library._SelectTab(lib, tab, btn, stroke, icon, textLabel, textGradient)
     if lib.currentTab then
         lib.currentTab.content.Visible = false
-        CreateTween(lib.currentTab.button, {BackgroundTransparency = 1}, animationspeed.Fast)
-        CreateTween(lib.currentTab.icon, {ImageColor3 = c.TextDark}, animationspeed.Fast)
+        lib.currentTab.button.BackgroundTransparency = 1
+        lib.currentTab.icon.ImageColor3 = c.TextDark
         lib.currentTab.stroke.Transparency = 1
 
         if lib.currentTab.textGradient then
@@ -1092,8 +1098,8 @@ function Library._SelectTab(lib, tab, btn, stroke, icon, textLabel, textGradient
     lib.currentTab = tab
     tab.content.Visible = true
 
-    CreateTween(btn, {BackgroundTransparency = 1}, animationspeed.Fast)
-    CreateTween(icon, {ImageColor3 = c.Text}, animationspeed.Fast)
+    btn.BackgroundTransparency = 1
+    icon.ImageColor3 = c.Text
     stroke.Transparency = 1
 
     if textGradient then
@@ -1343,7 +1349,7 @@ function Library._CreateSlider(tab, config)
         local frameSize = sliderBg.AbsoluteSize
         local relativeX = math.clamp((pos.X - framePos.X) / frameSize.X, 0, 1)
         currentValue = math.floor(min + (max - min) * relativeX)
-        CreateTween(sliderFill, {Size = UDim2.new(relativeX, 0, 1, 0)}, 0.05)
+        sliderFill.Size = UDim2.new(relativeX
         valueLabel.Text = tostring(currentValue)
         callback(currentValue)
     end
@@ -1440,9 +1446,9 @@ function Library._CreateButton(tab, config)
     })
 
     button.MouseButton1Click:Connect(function()
-        CreateTween(frame, {BackgroundTransparency = 0.2}, animationspeed.Fast)
+        frame.BackgroundTransparency = 0.2
         task.wait(0.1)
-        CreateTween(frame, {BackgroundTransparency = 0.4}, animationspeed.Fast)
+        frame.BackgroundTransparency = 0.4
         callback()
     end)
 
@@ -1523,11 +1529,11 @@ function Library._CreateToggle(tab, config)
 
     local function UpdateToggle()
         if enabled then
-            CreateTween(switchBg, {BackgroundColor3 = c.Toggle.Enabled}, animationspeed.Normal)
-            CreateTween(switchCircle, {Position = UDim2.new(0, 21, 0.5, 0)}, animationspeed.Normal)
+            switchBg.BackgroundColor3 = c.Toggle.Enabled
+            switchCircle.Position = UDim2.new(0
         else
-            CreateTween(switchBg, {BackgroundColor3 = c.Toggle.Disabled}, animationspeed.Normal)
-            CreateTween(switchCircle, {Position = UDim2.new(0, 4, 0.5, 0)}, animationspeed.Normal)
+            switchBg.BackgroundColor3 = c.Toggle.Disabled
+            switchCircle.Position = UDim2.new(0
         end
     end
 
@@ -1619,11 +1625,11 @@ function Library._CreateCheckbox(tab, config)
 
     local function UpdateCheckbox()
         if enabled then
-            CreateTween(checkBg, {BackgroundColor3 = c.Checkbox.Enabled}, animationspeed.Normal)
-            CreateTween(checkStroke, {Color = c.Checkbox.Enabled}, animationspeed.Normal)
+            checkBg.BackgroundColor3 = c.Checkbox.Enabled
+            checkStroke.Color = c.Checkbox.Enabled
         else
-            CreateTween(checkBg, {BackgroundColor3 = c.Checkbox.Disabled}, animationspeed.Normal)
-            CreateTween(checkStroke, {Color = c.Checkbox.Border}, animationspeed.Normal)
+            checkBg.BackgroundColor3 = c.Checkbox.Disabled
+            checkStroke.Color = c.Checkbox.Border
         end
     end
 
@@ -1636,13 +1642,13 @@ function Library._CreateCheckbox(tab, config)
     -- Hover effect
     button.MouseEnter:Connect(function()
         if not enabled then
-            CreateTween(checkStroke, {Color = Color3.fromRGB(90, 90, 90)}, animationspeed.Fast)
+            checkStroke.Color = Color3.fromRGB(90
         end
     end)
 
     button.MouseLeave:Connect(function()
         if not enabled then
-            CreateTween(checkStroke, {Color = c.Checkbox.Border}, animationspeed.Fast)
+            checkStroke.Color = c.Checkbox.Border
         end
     end)
 
@@ -1707,13 +1713,9 @@ function Library._CreateRadioGroup(tab, config)
     local function UpdateRadios()
         for _, rb in ipairs(radioButtons) do
             local isSelected = rb.value == selected
-            CreateTween(rb.outerRing, {
-                BorderColor3 = isSelected and c.Accent or c.Border
-            }, animationspeed.Fast)
-            CreateTween(rb.innerDot, {
-                BackgroundColor3 = isSelected and c.Accent or c.Secondary,
-                BackgroundTransparency = isSelected and 0 or 1
-            }, animationspeed.Fast)
+            rb.outerRing.BorderColor3 = isSelected and c.Accent or c.Border
+            rb.innerDot.BackgroundColor3 = isSelected and c.Accent or c.Secondary
+            rb.innerDot.BackgroundTransparency = isSelected and 0 or 1
         end
     end
 
@@ -1784,9 +1786,7 @@ function Library._CreateRadioGroup(tab, config)
             selected = option
             -- Update label colors
             for _, rb in ipairs(radioButtons) do
-                CreateTween(rb.label, {
-                    TextColor3 = rb.value == selected and c.Text or c.TextDark
-                }, animationspeed.Fast)
+                rb.label.TextColor3 = rb.value == selected and c.Text or c.TextDark
             end
             UpdateRadios()
             callback(selected)
@@ -1794,13 +1794,13 @@ function Library._CreateRadioGroup(tab, config)
 
         clickBtn.MouseEnter:Connect(function()
             if option ~= selected then
-                CreateTween(optLabel, {TextColor3 = Color3.fromRGB(170, 170, 170)}, animationspeed.Fast)
+                optLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
             end
         end)
 
         clickBtn.MouseLeave:Connect(function()
             if option ~= selected then
-                CreateTween(optLabel, {TextColor3 = c.TextDark}, animationspeed.Fast)
+                optLabel.TextColor3 = c.TextDark
             end
         end)
     end
@@ -1810,13 +1810,166 @@ function Library._CreateRadioGroup(tab, config)
             if table.find(options, value) then
                 selected = value
                 for _, rb in ipairs(radioButtons) do
-                    CreateTween(rb.label, {
-                        TextColor3 = rb.value == selected and c.Text or c.TextDark
-                    }, animationspeed.Fast)
+                    rb.label.TextColor3 = rb.value == selected and c.Text or c.TextDark
                 end
                 UpdateRadios()
                 callback(selected)
             end
+        end,
+        GetValue = function()
+            return selected
+        end
+    }
+
+    if flag and tab._library then
+        tab._library:_RegisterConfigElement(flag, "RadioGroup",
+            function() return selected end,
+            function(value) methods:SetValue(value) end
+        )
+    end
+
+    return methods
+end
+
+function Library._CreateRadioGroup(tab, config)
+    local name = config.Name or "Radio Group"
+    local options = config.Options or {"Option 1", "Option 2", "Option 3"}
+    local default = config.Default or options[1]
+    local callback = config.Callback or function() end
+    local flag = config.Flag
+    local selected = default
+
+    local frame = CreateInstance("Frame", {
+        Name = "RadioGroup_" .. name,
+        BackgroundColor3 = c.Secondary,
+        BackgroundTransparency = 0.4,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Parent = tab.content
+    })
+    CreateCorner(frame, 5)
+    CreateStroke(frame)
+    CreatePadding(frame, 8, 8, 10, 10)
+    CreateListLayout(frame, 5, Enum.SortOrder.LayoutOrder)
+
+    local nameLabel = CreateInstance("TextLabel", {
+        Name = "Name",
+        FontFace = f.Regular,
+        TextColor3 = c.Text,
+        Text = name,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        LayoutOrder = 0,
+        TextSize = textsize.Normal,
+        Size = UDim2.new(1, 0, 0, 20),
+        Parent = frame
+    })
+
+    local optionFrames = {}
+
+    local function UpdateRadio()
+        for _, data in pairs(optionFrames) do
+            local isSelected = data.value == selected
+            data.outerRing.BackgroundColor3 = isSelected and c.Accent or c.Secondary
+            data.outerRing.BorderSizePixel = 0
+            data.stroke.Color = isSelected and c.Accent or c.Border
+            data.innerDot.Visible = isSelected
+            data.label.TextColor3 = isSelected and c.Text or c.TextDark
+        end
+    end
+
+    for i, option in ipairs(options) do
+        local row = CreateInstance("Frame", {
+            Name = "Option_" .. option,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, 28),
+            LayoutOrder = i,
+            Parent = frame
+        })
+
+        local outerRing = CreateInstance("Frame", {
+            Name = "OuterRing",
+            BackgroundColor3 = option == selected and c.Accent or c.Secondary,
+            AnchorPoint = Vector2.new(0, 0.5),
+            Position = UDim2.new(0, 0, 0.5, 0),
+            BorderSizePixel = 0,
+            Size = UDim2.new(0, 16, 0, 16),
+            Parent = row
+        })
+        CreateCorner(outerRing, 100)
+        local ringStroke = CreateInstance("UIStroke", {
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+            Color = option == selected and c.Accent or c.Border,
+            Thickness = 1.5,
+            Parent = outerRing
+        })
+
+        local innerDot = CreateInstance("Frame", {
+            Name = "InnerDot",
+            BackgroundColor3 = c.Background,
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            BorderSizePixel = 0,
+            Size = UDim2.new(0, 6, 0, 6),
+            Visible = option == selected,
+            Parent = outerRing
+        })
+        CreateCorner(innerDot, 100)
+
+        local optLabel = CreateInstance("TextLabel", {
+            Name = "Label",
+            FontFace = f.Regular,
+            TextColor3 = option == selected and c.Text or c.TextDark,
+            Text = option,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 26, 0, 0),
+            TextSize = textsize.Small,
+            Size = UDim2.new(1, -26, 1, 0),
+            Parent = row
+        })
+
+        local clickBtn = CreateInstance("TextButton", {
+            Name = "Click",
+            Text = "",
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 1, 0),
+            Parent = row
+        })
+
+        optionFrames[option] = {
+            value = option,
+            outerRing = outerRing,
+            stroke = ringStroke,
+            innerDot = innerDot,
+            label = optLabel
+        }
+
+        clickBtn.MouseButton1Click:Connect(function()
+            selected = option
+            UpdateRadio()
+            callback(selected)
+        end)
+
+        clickBtn.MouseEnter:Connect(function()
+            if selected ~= option then
+                optLabel.TextColor3 = c.Text
+            end
+        end)
+
+        clickBtn.MouseLeave:Connect(function()
+            if selected ~= option then
+                optLabel.TextColor3 = c.TextDark
+            end
+        end)
+    end
+
+    local methods = {
+        SetValue = function(_, value)
+            selected = value
+            UpdateRadio()
+            callback(selected)
         end,
         GetValue = function()
             return selected
@@ -1971,11 +2124,11 @@ function Library._CreateDropdown(tab, config)
         })
 
         optionBtn.MouseEnter:Connect(function()
-            CreateTween(optionBtn, {BackgroundTransparency = 0.5}, animationspeed.Fast)
+            optionBtn.BackgroundTransparency = 0.5
         end)
 
         optionBtn.MouseLeave:Connect(function()
-            CreateTween(optionBtn, {BackgroundTransparency = 1}, animationspeed.Fast)
+            optionBtn.BackgroundTransparency = 1
         end)
 
         optionBtn.MouseButton1Click:Connect(function()
@@ -1994,7 +2147,7 @@ function Library._CreateDropdown(tab, config)
                 callback(selected)
                 expanded = false
                 optionsContainer.Visible = false
-                CreateTween(arrow, {Rotation = 0}, animationspeed.Normal)
+                arrow.Rotation = 0
                 frame.ZIndex = 1
             end
         end)
@@ -2018,7 +2171,7 @@ function Library._CreateDropdown(tab, config)
     toggleBtn.MouseButton1Click:Connect(function()
         expanded = not expanded
         optionsContainer.Visible = expanded
-        CreateTween(arrow, {Rotation = expanded and 180 or 0}, animationspeed.Normal)
+        arrow.Rotation = expanded and 180 or 0
         frame.ZIndex = expanded and 10 or 1
     end)
 
@@ -2545,15 +2698,15 @@ function Library._CreateTextBox(tab, config)
     })
 
     textBox.Focused:Connect(function()
-        CreateTween(textBoxContainer, {BackgroundTransparency = 0}, animationspeed.Fast)
-        CreateTween(textBoxStroke, {Color = c.Accent}, animationspeed.Fast)
-        CreateTween(icon, {ImageColor3 = c.Text}, animationspeed.Fast)
+        textBoxContainer.BackgroundTransparency = 0
+        textBoxStroke.Color = c.Accent
+        icon.ImageColor3 = c.Text
     end)
 
     textBox.FocusLost:Connect(function(enterPressed)
-        CreateTween(textBoxContainer, {BackgroundTransparency = 0.04}, animationspeed.Fast)
-        CreateTween(textBoxStroke, {Color = c.Border}, animationspeed.Fast)
-        CreateTween(icon, {ImageColor3 = c.TextDark}, animationspeed.Fast)
+        textBoxContainer.BackgroundTransparency = 0.04
+        textBoxStroke.Color = c.Border
+        icon.ImageColor3 = c.TextDark
 
         if numbersOnly then
             local numValue = tonumber(textBox.Text)
