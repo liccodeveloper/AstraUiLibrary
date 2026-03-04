@@ -230,7 +230,7 @@ local function CreateNotificationContainer(screenGui)
     return NotificationContainer
 end
 
-function Library.new(title, configFolder, sizeConfig)
+function Library.new(title, configFolder, sizeConfig, options)
     local self = setmetatable({}, Library)
     self.title = title or "Astra"
     self.configFolder = configFolder or title or "Astra"
@@ -255,11 +255,64 @@ function Library.new(title, configFolder, sizeConfig)
     self._configElements = {}
     self._autoSave = false
     self._currentConfig = "default"
+
+    -- Options: AccentColor, Watermark
+    local opts = options or {}
+    if opts.AccentColor then
+        c.Accent = opts.AccentColor
+        c.Toggle.Enabled = opts.AccentColor
+        c.Checkbox.Enabled = opts.AccentColor
+        c.Checkbox.Border = opts.AccentColor
+    end
+    self._watermarkText = opts.Watermark or nil
+
     self:_CreateMainv0rtexd()
     self:_SetupKeybindListener()
     self:_SetupMobileSupport()
     CreateNotificationContainer(self.screenGui)
+    if self._watermarkText then
+        self:_CreateWatermark(self._watermarkText)
+    end
     return self
+end
+
+function Library:SetAccentColor(color)
+    c.Accent = color
+    c.Toggle.Enabled = color
+    c.Checkbox.Enabled = color
+    c.Checkbox.Border = color
+    -- Update existing slider fills and toggle switches
+    if self._watermarkLabel then
+        -- no-op, just accent updates
+    end
+end
+
+function Library:SetWatermark(text)
+    self._watermarkText = text
+    if self._watermarkLabel then
+        self._watermarkLabel.Text = text
+    else
+        self:_CreateWatermark(text)
+    end
+end
+
+function Library:_CreateWatermark(text)
+    local watermark = CreateInstance("TextLabel", {
+        Name = "Watermark",
+        FontFace = f.Regular,
+        TextColor3 = Color3.fromRGB(40, 40, 40),
+        Text = text,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        BackgroundTransparency = 1,
+        TextSize = 11,
+        AnchorPoint = Vector2.new(1, 1),
+        Position = UDim2.new(1, -8, 1, -6),
+        Size = UDim2.new(0, 300, 0, 16),
+        ZIndex = 10,
+        Parent = self.screenGui
+    })
+    self._watermarkLabel = watermark
+    return watermark
 end
 
 function Library:Notify(config)
@@ -1078,6 +1131,10 @@ function Library._CreateTab(section, name, icon)
 
     function tabMethods:CreateConfigSection()
         return Library._CreateConfigSection(self)
+    end
+
+    function tabMethods:CreateProgressBar(config)
+        return Library._CreateProgressBar(self, config)
     end
 
     return tabMethods
@@ -2757,6 +2814,96 @@ function Library._CreateTextBox(tab, config)
     end
 
     return methods
+end
+
+function Library._CreateProgressBar(tab, config)
+    local name    = config.Name    or "Progress"
+    local min     = config.Min     or 0
+    local max     = config.Max     or 100
+    local default = config.Default or 0
+    local suffix  = config.Suffix  or ""
+    local current = math.clamp(default, min, max)
+
+    local frame = CreateInstance("Frame", {
+        Name = "ProgressBar_" .. name,
+        BackgroundColor3 = c.Secondary,
+        BackgroundTransparency = 0.4,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, s.Slider.Height),
+        Parent = tab.content
+    })
+    CreateCorner(frame, 5)
+    CreateStroke(frame)
+
+    local nameLabel = CreateInstance("TextLabel", {
+        Name = "Name",
+        FontFace = f.Regular,
+        TextColor3 = c.Text,
+        Text = name,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 0, 5),
+        TextSize = textsize.Normal,
+        Size = UDim2.new(0, 200, 0, 20),
+        Parent = frame
+    })
+
+    local valueLabel = CreateInstance("TextLabel", {
+        Name = "Value",
+        FontFace = f.Regular,
+        TextColor3 = c.TextDark,
+        Text = tostring(current) .. suffix,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -60, 0, 5),
+        TextSize = textsize.Normal,
+        Size = UDim2.new(0, 50, 0, 20),
+        Parent = frame
+    })
+
+    local trackBg = CreateInstance("Frame", {
+        Name = "Track",
+        BackgroundColor3 = Color3.fromRGB(11, 11, 11),
+        Position = UDim2.new(0, 10, 0, 29),
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, -20, 0, 7),
+        Parent = frame
+    })
+    CreateCorner(trackBg, 100)
+
+    local fillRatio = (max - min) > 0 and (current - min) / (max - min) or 0
+    local fill = CreateInstance("Frame", {
+        Name = "Fill",
+        BackgroundColor3 = c.Accent,
+        BorderSizePixel = 0,
+        Size = UDim2.new(fillRatio, 0, 1, 0),
+        Parent = trackBg
+    })
+    CreateCorner(fill, 100)
+
+    local function Refresh(value)
+        current = math.clamp(value, min, max)
+        local ratio = (max - min) > 0 and (current - min) / (max - min) or 0
+        fill.Size = UDim2.new(ratio, 0, 1, 0)
+        valueLabel.Text = tostring(current) .. suffix
+    end
+
+    return {
+        SetValue = function(_, value)
+            Refresh(value)
+        end,
+        GetValue = function()
+            return current
+        end,
+        SetMax = function(_, value)
+            max = value
+            Refresh(current)
+        end,
+        SetMin = function(_, value)
+            min = value
+            Refresh(current)
+        end
+    }
 end
 
 function Library._CreateConfigSection(tab)
