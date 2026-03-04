@@ -19,6 +19,12 @@ local c = {
         Disabled = Color3.fromRGB(32, 32, 32),
         Circle = Color3.fromRGB(20, 20, 20)
     },
+    Checkbox = {
+        Enabled = Color3.fromRGB(255, 255, 255),
+        Disabled = Color3.fromRGB(22, 22, 22),
+        Border = Color3.fromRGB(60, 60, 60),
+        Check = Color3.fromRGB(12, 12, 12)
+    },
     Notification = {
         Background = Color3.fromRGB(11, 11, 11),
         Border = Color3.fromRGB(26, 26, 26),
@@ -1032,6 +1038,10 @@ function Library._CreateTab(section, name, icon)
         return Library._CreateToggle(self, config)
     end
 
+    function tabMethods:CreateCheckbox(config)
+        return Library._CreateCheckbox(self, config)
+    end
+
     function tabMethods:CreateDropdown(config)
         return Library._CreateDropdown(self, config)
     end
@@ -1429,6 +1439,130 @@ function Library._CreateToggle(tab, config)
 
     if flag and tab._library then
         tab._library:_RegisterConfigElement(flag, "Toggle",
+            function() return enabled end,
+            function(value) methods:SetValue(value) end
+        )
+    end
+
+    return methods
+end
+
+function Library._CreateCheckbox(tab, config)
+    local name = config.Name or "Checkbox"
+    local default = config.Default or false
+    local callback = config.Callback or function() end
+    local flag = config.Flag
+    local enabled = default
+
+    local frame = CreateInstance("Frame", {
+        Name = "Checkbox_" .. name,
+        BackgroundColor3 = c.Secondary,
+        BackgroundTransparency = 0.4,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, s.Button.Height),
+        Parent = tab.content
+    })
+    CreateCorner(frame, 5)
+    CreateStroke(frame)
+
+    local nameLabel = CreateInstance("TextLabel", {
+        Name = "Name",
+        FontFace = f.Regular,
+        TextColor3 = c.Text,
+        Text = name,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 0.5, -10),
+        TextSize = textsize.Normal,
+        Size = UDim2.new(0, 200, 0, 20),
+        Parent = frame
+    })
+
+    -- Outer box
+    local checkBg = CreateInstance("Frame", {
+        Name = "CheckBackground",
+        BackgroundColor3 = enabled and c.Checkbox.Enabled or c.Checkbox.Disabled,
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -10, 0.5, 0),
+        BorderSizePixel = 0,
+        Size = UDim2.new(0, 18, 0, 18),
+        Parent = frame
+    })
+    CreateCorner(checkBg, 4)
+    local checkStroke = CreateInstance("UIStroke", {
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        Color = enabled and c.Checkbox.Enabled or c.Checkbox.Border,
+        Thickness = 1.5,
+        Parent = checkBg
+    })
+
+    -- Check mark (✓) label inside the box
+    local checkMark = CreateInstance("TextLabel", {
+        Name = "CheckMark",
+        Text = "✓",
+        Font = Enum.Font.GothamBold,
+        TextColor3 = c.Checkbox.Check,
+        TextSize = 13,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        Visible = enabled,
+        Parent = checkBg
+    })
+
+    local button = CreateInstance("TextButton", {
+        Name = "Button",
+        Text = "",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Parent = frame
+    })
+
+    local function UpdateCheckbox()
+        if enabled then
+            CreateTween(checkBg, {BackgroundColor3 = c.Checkbox.Enabled}, animationspeed.Normal)
+            CreateTween(checkStroke, {Color = c.Checkbox.Enabled}, animationspeed.Normal)
+            checkMark.Visible = true
+        else
+            CreateTween(checkBg, {BackgroundColor3 = c.Checkbox.Disabled}, animationspeed.Normal)
+            CreateTween(checkStroke, {Color = c.Checkbox.Border}, animationspeed.Normal)
+            checkMark.Visible = false
+        end
+    end
+
+    button.MouseButton1Click:Connect(function()
+        enabled = not enabled
+        UpdateCheckbox()
+        callback(enabled)
+    end)
+
+    -- Hover effect
+    button.MouseEnter:Connect(function()
+        if not enabled then
+            CreateTween(checkStroke, {Color = Color3.fromRGB(90, 90, 90)}, animationspeed.Fast)
+        end
+    end)
+
+    button.MouseLeave:Connect(function()
+        if not enabled then
+            CreateTween(checkStroke, {Color = c.Checkbox.Border}, animationspeed.Fast)
+        end
+    end)
+
+    local methods = {
+        SetValue = function(_, value)
+            enabled = value
+            UpdateCheckbox()
+            callback(enabled)
+        end,
+        GetValue = function()
+            return enabled
+        end
+    }
+
+    if flag and tab._library then
+        tab._library:_RegisterConfigElement(flag, "Checkbox",
             function() return enabled end,
             function(value) methods:SetValue(value) end
         )
