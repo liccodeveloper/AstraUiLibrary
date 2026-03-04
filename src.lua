@@ -256,13 +256,29 @@ function Library.new(title, configFolder, sizeConfig, options)
     self._autoSave = false
     self._currentConfig = "default"
 
-    -- Options: AccentColor, Watermark
+    -- Options: AccentColor, Watermark, Theme
     local opts = options or {}
     if opts.AccentColor then
         c.Accent = opts.AccentColor
         c.Toggle.Enabled = opts.AccentColor
         c.Checkbox.Enabled = opts.AccentColor
         c.Checkbox.Border = opts.AccentColor
+    end
+    -- Theme: "light" overrides all colors to a white scheme
+    if opts.Theme == "light" then
+        c.Background   = Color3.fromRGB(240, 240, 240)
+        c.Secondary    = Color3.fromRGB(228, 228, 228)
+        c.Border       = Color3.fromRGB(208, 208, 208)
+        c.Text         = Color3.fromRGB(17, 17, 17)
+        c.TextDark     = Color3.fromRGB(130, 130, 130)
+        c.TextFade     = Color3.fromRGB(210, 210, 210)
+        c.Toggle.Disabled  = Color3.fromRGB(200, 200, 200)
+        c.Toggle.Circle    = Color3.fromRGB(240, 240, 240)
+        c.Checkbox.Disabled = Color3.fromRGB(210, 210, 210)
+        c.Checkbox.Border   = opts.AccentColor or Color3.fromRGB(180, 180, 180)
+        c.Notification.Background = Color3.fromRGB(230, 230, 230)
+        c.Notification.Border     = Color3.fromRGB(200, 200, 200)
+        c.Notification.Timer      = opts.AccentColor or Color3.fromRGB(80, 80, 80)
     end
     self._watermarkText = opts.Watermark or nil
 
