@@ -1022,6 +1022,14 @@ function Library._CreateTab(section, name, icon)
         return Library._CreateContentSection(self, sectionName)
     end
 
+    function tabMethods:CreateLabel(config)
+        return Library._CreateLabel(self, config)
+    end
+
+    function tabMethods:CreateSeparator(config)
+        return Library._CreateSeparator(self, config)
+    end
+
     function tabMethods:CreateParagraph(config)
         return Library._CreateParagraph(self, config)
     end
@@ -1103,6 +1111,105 @@ function Library._CreateContentSection(tab, name)
         Parent = tab.content
     })
     return section
+end
+
+function Library._CreateLabel(tab, config)
+    local text = config.Text or "Label"
+    local textColor = config.TextColor or c.TextDark
+    local textSize = config.TextSize or textsize.Normal
+
+    local label = CreateInstance("TextLabel", {
+        Name = "Label_" .. text,
+        FontFace = f.Regular,
+        TextColor3 = textColor,
+        Text = text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextWrapped = true,
+        BackgroundTransparency = 1,
+        TextSize = textSize,
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Parent = tab.content
+    })
+
+    return {
+        SetText = function(_, newText)
+            label.Text = newText
+        end,
+        SetColor = function(_, color)
+            label.TextColor3 = color
+        end,
+        GetText = function()
+            return label.Text
+        end
+    }
+end
+
+function Library._CreateSeparator(tab, config)
+    local text = config and config.Text or nil
+
+    local container = CreateInstance("Frame", {
+        Name = "Separator",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, text and 20 or 10),
+        Parent = tab.content
+    })
+
+    if text and text ~= "" then
+        local leftLine = CreateInstance("Frame", {
+            BackgroundColor3 = c.Border,
+            AnchorPoint = Vector2.new(0, 0.5),
+            Position = UDim2.new(0, 0, 0.5, 0),
+            BorderSizePixel = 0,
+            Size = UDim2.new(0, 0, 0, 1),
+            Parent = container
+        })
+
+        local label = CreateInstance("TextLabel", {
+            FontFace = f.Regular,
+            TextColor3 = c.TextDark,
+            Text = text,
+            BackgroundTransparency = 1,
+            TextSize = textsize.Tiny,
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Size = UDim2.new(0, 0, 1, 0),
+            AutomaticSize = Enum.AutomaticSize.X,
+            Parent = container
+        })
+
+        local rightLine = CreateInstance("Frame", {
+            BackgroundColor3 = c.Border,
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, 0, 0.5, 0),
+            BorderSizePixel = 0,
+            Size = UDim2.new(0, 0, 0, 1),
+            Parent = container
+        })
+
+        -- Update line widths after label renders
+        task.defer(function()
+            local labelW = label.AbsoluteSize.X
+            local totalW = container.AbsoluteSize.X
+            local lineW = math.floor((totalW - labelW - 12) / 2)
+            if lineW > 0 then
+                leftLine.Size = UDim2.new(0, lineW, 0, 1)
+                rightLine.Size = UDim2.new(0, lineW, 0, 1)
+                rightLine.Position = UDim2.new(1, 0, 0.5, 0)
+            end
+        end)
+    else
+        CreateInstance("Frame", {
+            BackgroundColor3 = c.Border,
+            AnchorPoint = Vector2.new(0, 0.5),
+            Position = UDim2.new(0, 0, 0.5, 0),
+            BorderSizePixel = 0,
+            Size = UDim2.new(1, 0, 0, 1),
+            Parent = container
+        })
+    end
+
+    return container
 end
 
 function Library._CreateParagraph(tab, config)
