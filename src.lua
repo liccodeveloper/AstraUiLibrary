@@ -4,7 +4,7 @@ local plr = game:GetService("Players")
 local gs = game:GetService("GuiService")
 local hs = game:GetService("HttpService")
 
-local n = "Acrylic"
+local n = "Astra"
 
 local c = {
     Background = Color3.fromRGB(12, 12, 12),
@@ -193,12 +193,12 @@ local function DisconnectAll()
 end
 
 local function GetConfigFolder(configName)
-    return "AcrylicConfigs/" .. configName
+    return "AstraConfigs/" .. configName
 end
 
 local function EnsureConfigFolder()
-    if isfolder and not isfolder("AcrylicConfigs") then
-        makefolder("AcrylicConfigs")
+    if isfolder and not isfolder("AstraConfigs") then
+        makefolder("AstraConfigs")
     end
 end
 
@@ -206,9 +206,9 @@ local function GetAvailableConfigs()
     local configs = {}
     if isfolder and listfiles then
         EnsureConfigFolder()
-        local files = listfiles("AcrylicConfigs")
+        local files = listfiles("AstraConfigs")
         for _, file in ipairs(files) do
-            local name = file:match("AcrylicConfigs/(.+)%.json$") or file:match("AcrylicConfigs\\(.+)%.json$")
+            local name = file:match("AstraConfigs/(.+)%.json$") or file:match("AstraConfigs\\(.+)%.json$")
             if name then
                 table.insert(configs, name)
             end
@@ -232,8 +232,8 @@ end
 
 function Library.new(title, configFolder)
     local self = setmetatable({}, Library)
-    self.title = title or "Acrylic"
-    self.configFolder = configFolder or title or "Acrylic"
+    self.title = title or "Astra"
+    self.configFolder = configFolder or title or "Astra"
     self.sections = {}
     self.currentTab = nil
     self.minimized = false
@@ -704,7 +704,7 @@ function Library:SaveConfig(configName)
     end
 
     local success, err = pcall(function()
-        writefile("AcrylicConfigs/" .. configName .. ".json", hs:JSONEncode(configData))
+        writefile("AstraConfigs/" .. configName .. ".json", hs:JSONEncode(configData))
     end)
 
     if success then
@@ -736,7 +736,7 @@ function Library:LoadConfig(configName)
         return false
     end
 
-    local path = "AcrylicConfigs/" .. configName .. ".json"
+    local path = "AstraConfigs/" .. configName .. ".json"
     if not isfile(path) then
         self:Notify({
             Title = "Error",
@@ -788,7 +788,7 @@ function Library:DeleteConfig(configName)
         return false
     end
 
-    local path = "AcrylicConfigs/" .. configName .. ".json"
+    local path = "AstraConfigs/" .. configName .. ".json"
     if isfile(path) then
         delfile(path)
         self:Notify({
