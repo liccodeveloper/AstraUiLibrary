@@ -1,8 +1,6 @@
 local ts = game:GetService("TweenService")
 local ui = game:GetService("UserInputService")
 local plr = game:GetService("Players")
-local lg = game:GetService("Lighting")
-local rs = game:GetService("RunService")
 local gs = game:GetService("GuiService")
 local hs = game:GetService("HttpService")
 
@@ -213,177 +211,6 @@ local function GetAvailableConfigs()
     return configs
 end
 
-local AcrylicBlur = {}
-AcrylicBlur.__index = AcrylicBlur
-
-function AcrylicBlur.new(object)
-    local self = setmetatable({
-        _object = object,
-        _folder = nil,
-        _root = nil,
-        _frame = nil,
-        _dof = nil,
-        _enabled = true
-    }, AcrylicBlur)
-    self:_Initialize()
-    return self
-end
-
-function AcrylicBlur:_CreateDepthOfField()
-    local existingDOF = lg:FindFirstChild("AcrylicBlur")
-    if existingDOF then
-        existingDOF:Destroy()
-    end
-    local existingBlur = lg:FindFirstChild("AcrylicBlurEffect")
-    if existingBlur then
-        existingBlur:Destroy()
-    end
-    
-    local dof = CreateInstance("DepthOfFieldEffect", {
-        Name = "AcrylicBlur",
-        FarIntensity = 0,
-        FocusDistance = 0.05,
-        InFocusRadius = 0.1,
-        NearIntensity = 0.5, 
-        Parent = lg
-    })
-    
-    self._dof = dof
-    return dof
-end
-
-function AcrylicBlur:_CreateFolder()
-    local existingFolder = workspace.CurrentCamera:FindFirstChild("AcrylicBlur")
-    if existingFolder then
-        existingFolder:Destroy()
-    end
-    self._folder = CreateInstance("Folder", {
-        Name = "AcrylicBlur",
-        Parent = workspace.CurrentCamera
-    })
-end
-
-function AcrylicBlur:_CreateRoot()
-    local part = CreateInstance("Part", {
-        Name = "Root",
-        Color = Color3.new(0, 0, 0),
-        Material = Enum.Material.Glass,
-        Size = Vector3.new(1, 1, 0),
-        Anchored = true,
-        CanCollide = false,
-        CanQuery = false,
-        Locked = true,
-        CastShadow = false,
-        Transparency = 0.95, 
-        Parent = self._folder
-    })
-    CreateInstance("SpecialMesh", {
-        MeshType = Enum.MeshType.Brick,
-        Parent = part
-    })
-    self._root = part
-end
-
-function AcrylicBlur:_CreateFrame()
-    self._frame = CreateInstance("Frame", {
-        Size = UDim2.new(1, 0, 1, 0),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundTransparency = 1,
-        Parent = self._object
-    })
-end
-
-function AcrylicBlur:_Render(distance)
-    distance = distance or 0.001
-    local positions = {
-        top_left = Vector2.new(),
-        top_right = Vector2.new(),
-        bottom_right = Vector2.new()
-    }
-
-    local function ViewportToWorld(location, dist)
-        local ray = workspace.CurrentCamera:ScreenPointToRay(location.X, location.Y)
-        return ray.Origin + ray.Direction * dist
-    end
-
-    local function GetOffset()
-        local viewY = workspace.CurrentCamera.ViewportSize.Y
-        return (viewY / 2560) * 24 + 4
-    end
-
-    local function UpdatePositions(size, position)
-        positions.top_left = position
-        positions.top_right = position + Vector2.new(size.X, 0)
-        positions.bottom_right = position + size
-    end
-
-    local function Update()
-        if not self._root or not self._enabled then return end
-        local tl = ViewportToWorld(positions.top_left, distance)
-        local tr = ViewportToWorld(positions.top_right, distance)
-        local br = ViewportToWorld(positions.bottom_right, distance)
-        local width = (tr - tl).Magnitude
-        local height = (tr - br).Magnitude
-        self._root.CFrame = CFrame.fromMatrix(
-            (tl + br) / 2,
-            workspace.CurrentCamera.CFrame.XVector,
-            workspace.CurrentCamera.CFrame.YVector,
-            workspace.CurrentCamera.CFrame.ZVector
-        )
-        self._root.Mesh.Scale = Vector3.new(width, height, 0)
-    end
-
-    local function OnChange()
-        if not self._enabled then return end
-        local offset = GetOffset()
-        local size = self._frame.AbsoluteSize - Vector2.new(offset, offset)
-        local position = self._frame.AbsolutePosition + Vector2.new(offset / 2, offset / 2)
-        UpdatePositions(size, position)
-        task.spawn(Update)
-    end
-
-    Connections["blur_cframe"] = workspace.CurrentCamera:GetPropertyChangedSignal("CFrame"):Connect(Update)
-    Connections["blur_viewport"] = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(Update)
-    Connections["blur_fov"] = workspace.CurrentCamera:GetPropertyChangedSignal("FieldOfView"):Connect(Update)
-    Connections["blur_pos"] = self._frame:GetPropertyChangedSignal("AbsolutePosition"):Connect(OnChange)
-    Connections["blur_size"] = self._frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(OnChange)
-    Connections["blur_render"] = rs.RenderStepped:Connect(Update)
-    task.spawn(OnChange)
-end
-
-function AcrylicBlur:_Initialize()
-    self:_CreateDepthOfField()
-    self:_CreateFolder()
-    self:_CreateRoot()
-    self:_CreateFrame()
-    self:_Render(0.001)
-end
-
-function AcrylicBlur:SetEnabled(enabled)
-    self._enabled = enabled
-    if self._root then
-        self._root.Transparency = enabled and 0.95 or 1
-    end
-    if self._dof then
-        self._dof.Enabled = enabled
-    end
-end
-
-function AcrylicBlur:Destroy()
-    if self._folder then
-        self._folder:Destroy()
-    end
-    local dof = lg:FindFirstChild("AcrylicBlur")
-    if dof then
-        dof:Destroy()
-    end
-    local blur = lg:FindFirstChild("AcrylicBlurEffect")
-    if blur then
-        blur:Destroy()
-    end
-end
-
 local function CreateNotificationContainer(screenGui)
     if NotificationContainer then return NotificationContainer end
     NotificationContainer = CreateInstance("Frame", {
@@ -404,7 +231,6 @@ function Library.new(title, configFolder)
     self.sections = {}
     self.currentTab = nil
     self.minimized = false
-    self._acrylicBlur = nil
     self._keybinds = {}
     self._toggleKey = Enum.KeyCode.RightControl
     self._visible = true
@@ -514,11 +340,7 @@ end
 function Library:Toggle()
     self._visible = not self._visible
     self.container.Visible = self._visible
-    
-    if self._acrylicBlur then
-        self._acrylicBlur:SetEnabled(self._visible)
-    end
-    
+
     if self._mobileToggle then
         self._mobileToggle.Visible = not self._visible
     end
@@ -544,10 +366,10 @@ function Library:_SetupMobileSupport()
     })
     CreateCorner(mobileButton, 25)
     CreateStroke(mobileButton)
-    
+
     local dragging = false
     local dragStart, startPos
-    
+
     mobileButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
@@ -555,7 +377,7 @@ function Library:_SetupMobileSupport()
             startPos = mobileButton.Position
         end
     end)
-    
+
     mobileButton.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             if dragging then
@@ -567,7 +389,7 @@ function Library:_SetupMobileSupport()
             dragging = false
         end
     end)
-    
+
     ui.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
             local delta = input.Position - dragStart
@@ -579,9 +401,9 @@ function Library:_SetupMobileSupport()
             )
         end
     end)
-    
+
     self._mobileToggle = mobileButton
-    
+
     if IsMobileDevice() then
         mobileButton.Visible = not self._visible
     end
@@ -597,7 +419,7 @@ function Library:_CreateMainv0rtexd()
     self.container = CreateInstance("Frame", {
         Name = "Container",
         BackgroundColor3 = c.Background,
-        BackgroundTransparency = 0.05,
+        BackgroundTransparency = 0,
         Position = UDim2.new(0.5, -s.v0rtexd.Width / 2, 0.5, -s.v0rtexd.Height / 2),
         BorderSizePixel = 0,
         Size = UDim2.new(0, s.v0rtexd.Width, 0, s.v0rtexd.Height),
@@ -643,7 +465,6 @@ function Library:_CreateMainv0rtexd()
 
     local player = plr.LocalPlayer
     self.screenGui.Parent = player:WaitForChild("PlayerGui")
-    self._acrylicBlur = AcrylicBlur.new(self.container)
 end
 
 function Library:_Createv0rtexdControls()
@@ -816,18 +637,12 @@ end
 function Library:_ToggleMinimize()
     self.minimized = not self.minimized
     if self.minimized then
-        if self._acrylicBlur then
-            self._acrylicBlur:SetEnabled(false)
-        end
         CreateTween(self.mainContent, {Size = UDim2.new(1, 0, 0, 0)}, animationspeed.Slow)
         CreateTween(self.container, {Size = UDim2.new(0, self.container.AbsoluteSize.X, 0, 45)}, animationspeed.Slow)
         if self.resizeBtn then
             self.resizeBtn.Visible = false
         end
     else
-        if self._acrylicBlur then
-            self._acrylicBlur:SetEnabled(true)
-        end
         CreateTween(self.container, {Size = UDim2.new(0, self.container.AbsoluteSize.X, 0, self._originalHeight)}, animationspeed.Slow)
         task.delay(0.1, function()
             CreateTween(self.mainContent, {Size = UDim2.new(1, 0, 1, -46)}, animationspeed.Normal)
@@ -842,16 +657,12 @@ function Library:Destroy()
     if self._autoSave then
         self:SaveConfig(self._currentConfig)
     end
-    
+
     DisconnectAll()
-    if self._acrylicBlur then
-        self._acrylicBlur:Destroy()
-    end
     if self.screenGui then
         self.screenGui:Destroy()
     end
 end
-
 
 function Library:_RegisterConfigElement(id, elementType, getValue, setValue)
     self._configElements[id] = {
@@ -870,26 +681,26 @@ function Library:SaveConfig(configName)
         })
         return false
     end
-    
+
     EnsureConfigFolder()
-    
+
     local configData = {}
     for id, element in pairs(self._configElements) do
         local value = element.getValue()
-        
+
         if typeof(value) == "Color3" then
             value = {R = value.R, G = value.G, B = value.B, _type = "Color3"}
         elseif typeof(value) == "EnumItem" then
             value = {_type = "EnumItem", _enum = tostring(value.EnumType), _value = value.Name}
         end
-        
+
         configData[id] = value
     end
-    
+
     local success, err = pcall(function()
         writefile("AcrylicConfigs/" .. configName .. ".json", hs:JSONEncode(configData))
     end)
-    
+
     if success then
         self._currentConfig = configName
         self:Notify({
@@ -918,7 +729,7 @@ function Library:LoadConfig(configName)
         })
         return false
     end
-    
+
     local path = "AcrylicConfigs/" .. configName .. ".json"
     if not isfile(path) then
         self:Notify({
@@ -928,11 +739,11 @@ function Library:LoadConfig(configName)
         })
         return false
     end
-    
+
     local success, data = pcall(function()
         return hs:JSONDecode(readfile(path))
     end)
-    
+
     if not success or not data then
         self:Notify({
             Title = "Error",
@@ -941,7 +752,7 @@ function Library:LoadConfig(configName)
         })
         return false
     end
-    
+
     for id, value in pairs(data) do
         if self._configElements[id] then
             if type(value) == "table" and value._type == "Color3" then
@@ -949,13 +760,13 @@ function Library:LoadConfig(configName)
             elseif type(value) == "table" and value._type == "EnumItem" then
                 value = Enum[value._enum][value._value]
             end
-            
+
             pcall(function()
                 self._configElements[id].setValue(value)
             end)
         end
     end
-    
+
     self._currentConfig = configName
     self:Notify({
         Title = "Config Loaded",
@@ -970,7 +781,7 @@ function Library:DeleteConfig(configName)
     if not delfile or not isfile then
         return false
     end
-    
+
     local path = "AcrylicConfigs/" .. configName .. ".json"
     if isfile(path) then
         delfile(path)
@@ -1245,25 +1056,24 @@ function Library._CreateTab(section, name, icon)
 end
 
 function Library._SelectTab(lib, tab, btn, stroke, icon, textLabel, textGradient)
-    
     if lib.currentTab then
         lib.currentTab.content.Visible = false
         CreateTween(lib.currentTab.button, {BackgroundTransparency = 1}, animationspeed.Fast)
         CreateTween(lib.currentTab.icon, {ImageColor3 = c.TextDark}, animationspeed.Fast)
         lib.currentTab.stroke.Transparency = 1
-        
+
         if lib.currentTab.textGradient then
             lib.currentTab.textGradient.Enabled = true
         end
     end
-    
+
     lib.currentTab = tab
     tab.content.Visible = true
-    
+
     CreateTween(btn, {BackgroundTransparency = 1}, animationspeed.Fast)
     CreateTween(icon, {ImageColor3 = c.Text}, animationspeed.Fast)
-    stroke.Transparency = 1  
-    
+    stroke.Transparency = 1
+
     if textGradient then
         textGradient.Enabled = false
     end
@@ -1450,7 +1260,7 @@ function Library._CreateSlider(tab, config)
     }
 
     if flag and tab._library then
-        tab._library:_RegisterConfigElement(flag, "Slider", 
+        tab._library:_RegisterConfigElement(flag, "Slider",
             function() return currentValue end,
             function(value) methods:SetValue(value) end
         )
@@ -1618,7 +1428,7 @@ function Library._CreateToggle(tab, config)
     }
 
     if flag and tab._library then
-        tab._library:_RegisterConfigElement(flag, "Toggle", 
+        tab._library:_RegisterConfigElement(flag, "Toggle",
             function() return enabled end,
             function(value) methods:SetValue(value) end
         )
@@ -1846,7 +1656,7 @@ function Library._CreateDropdown(tab, config)
     }
 
     if flag and tab._library then
-        tab._library:_RegisterConfigElement(flag, "Dropdown", 
+        tab._library:_RegisterConfigElement(flag, "Dropdown",
             function() return selected end,
             function(value) methods:SetValue(value) end
         )
@@ -1968,7 +1778,7 @@ function Library._CreateKeybind(tab, config, lib)
     }
 
     if flag and lib then
-        lib:_RegisterConfigElement(flag, "Keybind", 
+        lib:_RegisterConfigElement(flag, "Keybind",
             function() return currentKey end,
             function(value) methods:SetKey(value) end
         )
@@ -2254,7 +2064,7 @@ function Library._CreateColorPicker(tab, config)
     }
 
     if flag and tab._library then
-        tab._library:_RegisterConfigElement(flag, "ColorPicker", 
+        tab._library:_RegisterConfigElement(flag, "ColorPicker",
             function() return currentColor end,
             function(value) methods:SetColor(value) end
         )
@@ -2348,7 +2158,7 @@ function Library._CreateTextBox(tab, config)
         CreateTween(textBoxContainer, {BackgroundTransparency = 0.04}, animationspeed.Fast)
         CreateTween(textBoxStroke, {Color = c.Border}, animationspeed.Fast)
         CreateTween(icon, {ImageColor3 = c.TextDark}, animationspeed.Fast)
-        
+
         if numbersOnly then
             local numValue = tonumber(textBox.Text)
             if numValue then
@@ -2360,7 +2170,7 @@ function Library._CreateTextBox(tab, config)
         else
             currentText = textBox.Text
         end
-        
+
         callback(currentText, enterPressed)
     end)
 
@@ -2391,7 +2201,7 @@ function Library._CreateTextBox(tab, config)
     }
 
     if flag and tab._library then
-        tab._library:_RegisterConfigElement(flag, "TextBox", 
+        tab._library:_RegisterConfigElement(flag, "TextBox",
             function() return currentText end,
             function(value) methods:SetText(value) end
         )
@@ -2402,7 +2212,7 @@ end
 
 function Library._CreateConfigSection(tab)
     local lib = tab._library
-    
+
     Library._CreateContentSection(tab, "Configuration")
 
     local configNameBox = Library._CreateTextBox(tab, {
