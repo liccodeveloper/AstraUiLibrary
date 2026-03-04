@@ -1406,7 +1406,7 @@ function Library._CreateSlider(tab, config)
         local frameSize = sliderBg.AbsoluteSize
         local relativeX = math.clamp((pos.X - framePos.X) / frameSize.X, 0, 1)
         currentValue = math.floor(min + (max - min) * relativeX)
-        sliderFill.Size = UDim2.new(relativeX
+        sliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
         valueLabel.Text = tostring(currentValue)
         callback(currentValue)
     end
