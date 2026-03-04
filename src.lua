@@ -1050,6 +1050,10 @@ function Library._CreateTab(section, name, icon)
         return Library._CreateCheckbox(self, config)
     end
 
+    function tabMethods:CreateRadioGroup(config)
+        return Library._CreateRadioGroup(self, config)
+    end
+
     function tabMethods:CreateDropdown(config)
         return Library._CreateDropdown(self, config)
     end
@@ -1656,6 +1660,172 @@ function Library._CreateCheckbox(tab, config)
     if flag and tab._library then
         tab._library:_RegisterConfigElement(flag, "Checkbox",
             function() return enabled end,
+            function(value) methods:SetValue(value) end
+        )
+    end
+
+    return methods
+end
+
+function Library._CreateRadioGroup(tab, config)
+    local name = config.Name or "Radio Group"
+    local options = config.Options or {"Option 1", "Option 2", "Option 3"}
+    local default = config.Default or options[1]
+    local callback = config.Callback or function() end
+    local flag = config.Flag
+    local selected = default
+
+    local container = CreateInstance("Frame", {
+        Name = "RadioGroup_" .. name,
+        BackgroundColor3 = c.Secondary,
+        BackgroundTransparency = 0.4,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Parent = tab.content
+    })
+    CreateCorner(container, 5)
+    CreateStroke(container)
+    CreatePadding(container, 8, 8, 10, 10)
+    CreateListLayout(container, 6)
+
+    local titleLabel = CreateInstance("TextLabel", {
+        Name = "Title",
+        FontFace = f.Regular,
+        TextColor3 = c.Text,
+        Text = name,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        TextSize = textsize.Normal,
+        Size = UDim2.new(1, 0, 0, 20),
+        LayoutOrder = 0,
+        Parent = container
+    })
+
+    local radioButtons = {}
+
+    local function UpdateRadios()
+        for _, rb in ipairs(radioButtons) do
+            local isSelected = rb.value == selected
+            CreateTween(rb.outerRing, {
+                BorderColor3 = isSelected and c.Accent or c.Border
+            }, animationspeed.Fast)
+            CreateTween(rb.innerDot, {
+                BackgroundColor3 = isSelected and c.Accent or c.Secondary,
+                BackgroundTransparency = isSelected and 0 or 1
+            }, animationspeed.Fast)
+        end
+    end
+
+    for i, option in ipairs(options) do
+        local row = CreateInstance("Frame", {
+            Name = "Radio_" .. option,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, 26),
+            LayoutOrder = i,
+            Parent = container
+        })
+
+        -- Outer ring
+        local outerRing = CreateInstance("Frame", {
+            Name = "OuterRing",
+            BackgroundColor3 = c.Secondary,
+            BackgroundTransparency = 0,
+            AnchorPoint = Vector2.new(0, 0.5),
+            Position = UDim2.new(0, 0, 0.5, 0),
+            Size = UDim2.new(0, 16, 0, 16),
+            BorderSizePixel = 2,
+            BorderColor3 = option == selected and c.Accent or c.Border,
+            Parent = row
+        })
+        CreateCorner(outerRing, 100)
+
+        -- Inner dot
+        local innerDot = CreateInstance("Frame", {
+            Name = "InnerDot",
+            BackgroundColor3 = option == selected and c.Accent or c.Secondary,
+            BackgroundTransparency = option == selected and 0 or 1,
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Size = UDim2.new(0, 8, 0, 8),
+            BorderSizePixel = 0,
+            Parent = outerRing
+        })
+        CreateCorner(innerDot, 100)
+
+        local optLabel = CreateInstance("TextLabel", {
+            Name = "Label",
+            FontFace = f.Regular,
+            TextColor3 = option == selected and c.Text or c.TextDark,
+            Text = option,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            BackgroundTransparency = 1,
+            TextSize = textsize.Normal,
+            Position = UDim2.new(0, 24, 0, 0),
+            Size = UDim2.new(1, -24, 1, 0),
+            Parent = row
+        })
+
+        local clickBtn = CreateInstance("TextButton", {
+            Text = "",
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 1, 0),
+            Parent = row
+        })
+
+        table.insert(radioButtons, {
+            value = option,
+            outerRing = outerRing,
+            innerDot = innerDot,
+            label = optLabel
+        })
+
+        clickBtn.MouseButton1Click:Connect(function()
+            selected = option
+            -- Update label colors
+            for _, rb in ipairs(radioButtons) do
+                CreateTween(rb.label, {
+                    TextColor3 = rb.value == selected and c.Text or c.TextDark
+                }, animationspeed.Fast)
+            end
+            UpdateRadios()
+            callback(selected)
+        end)
+
+        clickBtn.MouseEnter:Connect(function()
+            if option ~= selected then
+                CreateTween(optLabel, {TextColor3 = Color3.fromRGB(170, 170, 170)}, animationspeed.Fast)
+            end
+        end)
+
+        clickBtn.MouseLeave:Connect(function()
+            if option ~= selected then
+                CreateTween(optLabel, {TextColor3 = c.TextDark}, animationspeed.Fast)
+            end
+        end)
+    end
+
+    local methods = {
+        SetValue = function(_, value)
+            if table.find(options, value) then
+                selected = value
+                for _, rb in ipairs(radioButtons) do
+                    CreateTween(rb.label, {
+                        TextColor3 = rb.value == selected and c.Text or c.TextDark
+                    }, animationspeed.Fast)
+                end
+                UpdateRadios()
+                callback(selected)
+            end
+        end,
+        GetValue = function()
+            return selected
+        end
+    }
+
+    if flag and tab._library then
+        tab._library:_RegisterConfigElement(flag, "RadioGroup",
+            function() return selected end,
             function(value) methods:SetValue(value) end
         )
     end
