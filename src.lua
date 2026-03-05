@@ -2384,9 +2384,19 @@ function Library._CreateKeybind(tab, config, lib)
     local name = config.Name or "Keybind"
     local default = config.Default or Enum.KeyCode.F
     local callback = config.Callback or function() end
+    local linkedToggle = config.Toggle  -- optional: reference to a toggle's methods
     local flag = config.Flag
     local currentKey = default
     local listening = false
+
+    -- If Toggle is linked, wrap callback to flip it
+    local function FireAction()
+        if linkedToggle then
+            local newVal = not linkedToggle:GetValue()
+            linkedToggle:SetValue(newVal)
+        end
+        callback(currentKey)
+    end
 
     local frame = CreateInstance("Frame", {
         Name = "Keybind_" .. name,
@@ -2411,6 +2421,22 @@ function Library._CreateKeybind(tab, config, lib)
         Size = UDim2.new(0, 200, 0, 20),
         Parent = frame
     })
+
+    -- Status dot (shows toggle state when linked)
+    local statusDot = nil
+    if linkedToggle then
+        statusDot = CreateInstance("Frame", {
+            Name = "StatusDot",
+            BackgroundColor3 = linkedToggle:GetValue() and c.Accent or c.TextDark,
+            AnchorPoint = Vector2.new(0, 0.5),
+            Position = UDim2.new(0, 10, 0.5, 0),
+            Size = UDim2.new(0, 6, 0, 6),
+            BorderSizePixel = 0,
+            Parent = frame
+        })
+        CreateCorner(statusDot, 100)
+        nameLabel.Position = UDim2.new(0, 22, 0.5, -10)
+    end
 
     local keybindBox = CreateInstance("Frame", {
         Name = "KeybindBox",
@@ -2448,7 +2474,7 @@ function Library._CreateKeybind(tab, config, lib)
 
     lib._keybinds[keybindId] = {
         key = currentKey,
-        callback = callback
+        callback = FireAction
     }
 
     local function UpdateKeyDisplay()
@@ -2460,6 +2486,21 @@ function Library._CreateKeybind(tab, config, lib)
             local textWidth = math.max(#keyName * 9 + 10, 24)
             keybindBox.Size = UDim2.new(0, textWidth, 0, 26)
             keyLabel.Text = keyName
+        end
+    end
+
+    local function UpdateDot()
+        if statusDot and linkedToggle then
+            statusDot.BackgroundColor3 = linkedToggle:GetValue() and c.Accent or c.TextDark
+        end
+    end
+
+    -- Intercept toggle's SetValue to keep dot in sync
+    if linkedToggle then
+        local originalSetValue = linkedToggle.SetValue
+        linkedToggle.SetValue = function(self, value)
+            originalSetValue(self, value)
+            UpdateDot()
         end
     end
 
