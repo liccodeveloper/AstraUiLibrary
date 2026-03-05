@@ -68,9 +68,8 @@ local animationspeed = {
 local Library = {}
 Library.__index = Library
 
-local Connections = {}
 local NotificationQueue = {}
-local NotificationContainer = nil
+local NotificationContainers = {}  -- keyed by screenGui, avoids global state leak
 
 -- Single global InputChanged handler — avoids N connections firing on every mouse move
 Library._activeDragger = nil  -- set to a function by whichever element is currently being dragged
@@ -182,15 +181,6 @@ local function MakeDraggable(frame, handle)
     handle.InputBegan:Connect(OnInputBegan)
 end
 
-local function DisconnectAll()
-    for _, connection in pairs(Connections) do
-        if typeof(connection) == "RBXScriptConnection" then
-            connection:Disconnect()
-        end
-    end
-    Connections = {}
-end
-
 local function GetConfigFolder(configName)
     return "AstraConfigs/" .. configName
 end
@@ -217,16 +207,15 @@ local function GetAvailableConfigs()
 end
 
 local function CreateNotificationContainer(screenGui)
-    if NotificationContainer then return NotificationContainer end
-    NotificationContainer = CreateInstance("Frame", {
+    local container = CreateInstance("Frame", {
         Name = "NotificationContainer",
         BackgroundTransparency = 1,
         Position = UDim2.new(1, -240, 0, 20),
         Size = UDim2.new(0, 220, 1, -40),
         Parent = screenGui
     })
-    CreateListLayout(NotificationContainer, 10, Enum.SortOrder.LayoutOrder, Enum.FillDirection.Vertical)
-    return NotificationContainer
+    CreateListLayout(container, 10, Enum.SortOrder.LayoutOrder, Enum.FillDirection.Vertical)
+    return container
 end
 
 function Library.new(title, configFolder, sizeConfig, options)
@@ -254,6 +243,7 @@ function Library.new(title, configFolder, sizeConfig, options)
     self._configElements = {}
     self._autoSave = false
     self._currentConfig = "default"
+    self._connections = {}  -- per-instance connection tracking
 
     -- Options: AccentColor, Watermark, Theme
     local opts = options or {}
@@ -284,7 +274,7 @@ function Library.new(title, configFolder, sizeConfig, options)
     self:_CreateMainv0rtexd()
     self:_SetupKeybindListener()
     self:_SetupMobileSupport()
-    CreateNotificationContainer(self.screenGui)
+    self._notifContainer = CreateNotificationContainer(self.screenGui)
     if self._watermarkText then
         self:_CreateWatermark(self._watermarkText)
     end
@@ -342,7 +332,7 @@ function Library:Notify(config)
         Position = UDim2.new(1, 20, 0, 0),
         Size = UDim2.new(1, 0, 0, s.Notification.Height),
         ClipsDescendants = true,
-        Parent = NotificationContainer
+        Parent = self._notifContainer
     })
     CreateCorner(notification, 4)
     CreateInstance("UIStroke", {
@@ -406,7 +396,7 @@ function Library:Notify(config)
 end
 
 function Library:_SetupKeybindListener()
-    Connections["keybind_listener"] = ui.InputBegan:Connect(function(input, gameProcessed)
+    self._connections["keybind_listener"] = ui.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
         if input.KeyCode == self._toggleKey then
             self:Toggle()
@@ -729,7 +719,13 @@ function Library:Destroy()
         self:SaveConfig(self._currentConfig)
     end
 
-    DisconnectAll()
+    for _, conn in pairs(self._connections) do
+        if typeof(conn) == "RBXScriptConnection" then
+            conn:Disconnect()
+        end
+    end
+    self._connections = {}
+
     if self.screenGui then
         self.screenGui:Destroy()
     end
@@ -1779,164 +1775,6 @@ function Library._CreateRadioGroup(tab, config)
     local flag = config.Flag
     local selected = default
 
-    local container = CreateInstance("Frame", {
-        Name = "RadioGroup_" .. name,
-        BackgroundColor3 = c.Secondary,
-        BackgroundTransparency = 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        Parent = tab.content
-    })
-    CreateCorner(container, 5)
-    CreateStroke(container)
-    CreatePadding(container, 8, 8, 10, 10)
-    CreateListLayout(container, 6)
-
-    local titleLabel = CreateInstance("TextLabel", {
-        Name = "Title",
-        FontFace = f.Regular,
-        TextColor3 = c.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        TextSize = textsize.Normal,
-        Size = UDim2.new(1, 0, 0, 20),
-        LayoutOrder = 0,
-        Parent = container
-    })
-
-    local radioButtons = {}
-
-    local function UpdateRadios()
-        for _, rb in ipairs(radioButtons) do
-            local isSelected = rb.value == selected
-            rb.outerRing.BorderColor3 = isSelected and c.Accent or c.Border
-            rb.innerDot.BackgroundColor3 = isSelected and c.Accent or c.Secondary
-            rb.innerDot.BackgroundTransparency = isSelected and 0 or 1
-        end
-    end
-
-    for i, option in ipairs(options) do
-        local row = CreateInstance("Frame", {
-            Name = "Radio_" .. option,
-            BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 26),
-            LayoutOrder = i,
-            Parent = container
-        })
-
-        -- Outer ring
-        local outerRing = CreateInstance("Frame", {
-            Name = "OuterRing",
-            BackgroundColor3 = c.Secondary,
-            BackgroundTransparency = 0,
-            AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, 0, 0.5, 0),
-            Size = UDim2.new(0, 16, 0, 16),
-            BorderSizePixel = 2,
-            BorderColor3 = option == selected and c.Accent or c.Border,
-            Parent = row
-        })
-        CreateCorner(outerRing, 100)
-
-        -- Inner dot
-        local innerDot = CreateInstance("Frame", {
-            Name = "InnerDot",
-            BackgroundColor3 = option == selected and c.Accent or c.Secondary,
-            BackgroundTransparency = option == selected and 0 or 1,
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            Size = UDim2.new(0, 8, 0, 8),
-            BorderSizePixel = 0,
-            Parent = outerRing
-        })
-        CreateCorner(innerDot, 100)
-
-        local optLabel = CreateInstance("TextLabel", {
-            Name = "Label",
-            FontFace = f.Regular,
-            TextColor3 = option == selected and c.Text or c.TextDark,
-            Text = option,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            BackgroundTransparency = 1,
-            TextSize = textsize.Normal,
-            Position = UDim2.new(0, 24, 0, 0),
-            Size = UDim2.new(1, -24, 1, 0),
-            Parent = row
-        })
-
-        local clickBtn = CreateInstance("TextButton", {
-            Text = "",
-            BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 1, 0),
-            Parent = row
-        })
-
-        table.insert(radioButtons, {
-            value = option,
-            outerRing = outerRing,
-            innerDot = innerDot,
-            label = optLabel
-        })
-
-        clickBtn.MouseButton1Click:Connect(function()
-            selected = option
-            -- Update label colors
-            for _, rb in ipairs(radioButtons) do
-                rb.label.TextColor3 = rb.value == selected and c.Text or c.TextDark
-            end
-            UpdateRadios()
-            callback(selected)
-        end)
-
-        clickBtn.MouseEnter:Connect(function()
-            if option ~= selected then
-                optLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
-            end
-        end)
-
-        clickBtn.MouseLeave:Connect(function()
-            if option ~= selected then
-                optLabel.TextColor3 = c.TextDark
-            end
-        end)
-    end
-
-    local methods = {
-        SetValue = function(_, value)
-            if table.find(options, value) then
-                selected = value
-                for _, rb in ipairs(radioButtons) do
-                    rb.label.TextColor3 = rb.value == selected and c.Text or c.TextDark
-                end
-                UpdateRadios()
-                callback(selected)
-            end
-        end,
-        GetValue = function()
-            return selected
-        end
-    }
-
-    if flag and tab._library then
-        tab._library:_RegisterConfigElement(flag, "RadioGroup",
-            function() return selected end,
-            function(value) methods:SetValue(value) end
-        )
-    end
-
-    return methods
-end
-
-function Library._CreateRadioGroup(tab, config)
-    local name = config.Name or "Radio Group"
-    local options = config.Options or {"Option 1", "Option 2", "Option 3"}
-    local default = config.Default or options[1]
-    local callback = config.Callback or function() end
-    local flag = config.Flag
-    local selected = default
-
     local frame = CreateInstance("Frame", {
         Name = "RadioGroup_" .. name,
         BackgroundColor3 = c.Secondary,
@@ -2091,6 +1929,7 @@ function Library._CreateDropdown(tab, config)
     local multiSelect = config.MultiSelect or false
     local callback = config.Callback or function() end
     local flag = config.Flag
+    local lib = tab._library
     local selected = multiSelect and {} or default
     local expanded = false
 
@@ -2321,13 +2160,50 @@ function Library._CreateDropdown(tab, config)
         Parent = selectedDisplay
     })
 
+    local function CloseDropdown()
+        expanded = false
+        optionsContainer.Visible = false
+        arrow.Rotation = 0
+        frame.ZIndex = 1
+        if searchBox then searchBox.Text = "" end
+        if Library._activeDropdown == CloseDropdown then
+            Library._activeDropdown = nil
+        end
+    end
+
     toggleBtn.MouseButton1Click:Connect(function()
-        expanded = not expanded
-        optionsContainer.Visible = expanded
-        arrow.Rotation = expanded and 180 or 0
-        frame.ZIndex = expanded and 10 or 1
-        if not expanded and searchBox then
-            searchBox.Text = ""
+        if expanded then
+            CloseDropdown()
+        else
+            -- Close any other open dropdown first
+            if Library._activeDropdown then
+                Library._activeDropdown()
+            end
+            expanded = true
+            optionsContainer.Visible = true
+            arrow.Rotation = 180
+            frame.ZIndex = 10
+            Library._activeDropdown = CloseDropdown
+        end
+    end)
+
+    -- Close when clicking anywhere outside
+    lib._connections["dropdown_outside_" .. tostring(frame)] = ui.InputBegan:Connect(function(input)
+        if not expanded then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1
+        and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        -- check if click was outside the dropdown frame
+        local mPos = input.Position
+        local fPos = optionsContainer.AbsolutePosition
+        local fSize = optionsContainer.AbsoluteSize
+        local hPos = frame.AbsolutePosition
+        local hSize = frame.AbsoluteSize
+        local inHeader = mPos.X >= hPos.X and mPos.X <= hPos.X + hSize.X
+                     and mPos.Y >= hPos.Y and mPos.Y <= hPos.Y + hSize.Y
+        local inList   = mPos.X >= fPos.X and mPos.X <= fPos.X + fSize.X
+                     and mPos.Y >= fPos.Y and mPos.Y <= fPos.Y + fSize.Y
+        if not inHeader and not inList then
+            CloseDropdown()
         end
     end)
 
@@ -2501,15 +2377,25 @@ function Library._CreateKeybind(tab, config, lib)
 
     local inputConnection
     inputConnection = ui.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
         if listening and input.UserInputType == Enum.UserInputType.Keyboard then
-            currentKey = input.KeyCode
-            listening = false
-            lib._keybinds[keybindId].key = currentKey
-            UpdateKeyDisplay()
+            -- Ignore modifier-only keys
+            local ignore = {
+                [Enum.KeyCode.LeftShift]=true, [Enum.KeyCode.RightShift]=true,
+                [Enum.KeyCode.LeftControl]=true, [Enum.KeyCode.RightControl]=true,
+                [Enum.KeyCode.LeftAlt]=true, [Enum.KeyCode.RightAlt]=true,
+                [Enum.KeyCode.LeftMeta]=true, [Enum.KeyCode.RightMeta]=true,
+            }
+            if not ignore[input.KeyCode] then
+                currentKey = input.KeyCode
+                listening = false
+                lib._keybinds[keybindId].key = currentKey
+                UpdateKeyDisplay()
+            end
         end
     end)
 
-    table.insert(Connections, inputConnection)
+    lib._connections["keybind_" .. keybindId] = inputConnection
     UpdateKeyDisplay()
 
     local methods = {
@@ -3147,63 +3033,67 @@ function Library._CreateTable(tab, config)
         local visibleRows = math.min(#data, maxVisible)
         local h = visibleRows * rowHeight
         bodyScroll.Size = UDim2.new(1, 0, 0, h)
+        bodyScroll.CanvasSize = UDim2.new(0, 0, 0, #data * rowHeight)
         frame.Size = UDim2.new(1, 0, 0, 57 + h + (h > 0 and 6 or 0))
     end
 
+    local function MakeRowFrame(idx, rowData)
+        local isEven = idx % 2 == 0
+        local rowFrame = CreateInstance("Frame", {
+            Name = "Row_" .. idx,
+            BackgroundColor3 = isEven and c.Background or c.Secondary,
+            BackgroundTransparency = isEven and 0.5 or 0.8,
+            BorderSizePixel = 0,
+            Size = UDim2.new(1, 0, 0, rowHeight),
+            LayoutOrder = idx,
+            Parent = bodyScroll
+        })
+        for i = 1, colCount do
+            local xPos = (i - 1) / colCount
+            local w = 1 / colCount
+            CreateInstance("TextLabel", {
+                FontFace = f.Regular,
+                TextColor3 = c.Text,
+                Text = tostring(rowData[i] or ""),
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(xPos, i == 1 and 10 or 4, 0, 0),
+                Size = UDim2.new(w, i == 1 and -10 or -4, 1, 0),
+                TextSize = textsize.Small,
+                Parent = rowFrame
+            })
+        end
+        return rowFrame
+    end
+
+    -- Full redraw (used by SetData, ClearRows, RemoveRow)
     local function RenderRows()
-        -- Clear existing
         for _, r in ipairs(rowFrames) do
             if r and r.Parent then r:Destroy() end
         end
         rowFrames = {}
-
-        for idx, row in ipairs(data) do
-            local isEven = idx % 2 == 0
-            local rowFrame = CreateInstance("Frame", {
-                Name = "Row_" .. idx,
-                BackgroundColor3 = isEven and c.Background or c.Secondary,
-                BackgroundTransparency = isEven and 0.5 or 0.8,
-                BorderSizePixel = 0,
-                Size = UDim2.new(1, 0, 0, rowHeight),
-                LayoutOrder = idx,
-                Parent = bodyScroll
-            })
-
-            for i = 1, colCount do
-                local cellVal = tostring(row[i] or "")
-                local xPos = (i - 1) / colCount
-                local w = 1 / colCount
-                CreateInstance("TextLabel", {
-                    FontFace = f.Regular,
-                    TextColor3 = c.Text,
-                    Text = cellVal,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    TextTruncate = Enum.TextTruncate.AtEnd,
-                    BackgroundTransparency = 1,
-                    Position = UDim2.new(xPos, i == 1 and 10 or 4, 0, 0),
-                    Size = UDim2.new(w, i == 1 and -10 or -4, 1, 0),
-                    TextSize = textsize.Small,
-                    Parent = rowFrame
-                })
-            end
-
-            table.insert(rowFrames, rowFrame)
+        for idx, rowData in ipairs(data) do
+            table.insert(rowFrames, MakeRowFrame(idx, rowData))
         end
-
         RefreshHeight()
     end
 
     RefreshHeight()
 
     local methods = {
+        -- AddRow: appends ONE frame — O(1), no full redraw
         AddRow = function(_, rowData)
             table.insert(data, rowData)
-            RenderRows()
+            local idx = #data
+            local rowFrame = MakeRowFrame(idx, rowData)
+            table.insert(rowFrames, rowFrame)
+            RefreshHeight()
         end,
         RemoveRow = function(_, index)
             if index >= 1 and index <= #data then
                 table.remove(data, index)
-                RenderRows()
+                RenderRows()  -- redraws to fix alternating row colors
             end
         end,
         ClearRows = function(_)
