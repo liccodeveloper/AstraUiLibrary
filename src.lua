@@ -1153,6 +1153,10 @@ function Library._CreateTab(section, name, icon)
         return Library._CreateProgressBar(self, config)
     end
 
+    function tabMethods:CreateTable(config)
+        return Library._CreateTable(self, config)
+    end
+
     return tabMethods
 end
 
@@ -1354,9 +1358,38 @@ function Library._CreateSlider(tab, config)
     local min = config.Min or 0
     local max = config.Max or 100
     local default = config.Default or 50
+    local step = config.Step or 1
+    local suffix = config.Suffix or ""
     local callback = config.Callback or function() end
     local flag = config.Flag
-    local currentValue = default
+
+    -- Determine decimal places from step
+    local decimals = 0
+    if step < 1 then
+        local stepStr = tostring(step)
+        local dot = stepStr:find("%.")
+        if dot then decimals = #stepStr - dot end
+    end
+
+    local function Round(value)
+        if step <= 0 then return value end
+        local snapped = math.floor((value - min) / step + 0.5) * step + min
+        snapped = math.clamp(snapped, min, max)
+        if decimals > 0 then
+            local mult = 10 ^ decimals
+            return math.floor(snapped * mult + 0.5) / mult
+        end
+        return math.floor(snapped + 0.5)
+    end
+
+    local currentValue = Round(default)
+
+    local function FormatValue(v)
+        if decimals > 0 then
+            return string.format("%." .. decimals .. "f", v) .. suffix
+        end
+        return tostring(math.floor(v)) .. suffix
+    end
 
     local frame = CreateInstance("Frame", {
         Name = "Slider_" .. name,
@@ -1386,12 +1419,12 @@ function Library._CreateSlider(tab, config)
         Name = "Value",
         FontFace = f.Regular,
         TextColor3 = c.Text,
-        Text = tostring(currentValue),
+        Text = FormatValue(currentValue),
         TextXAlignment = Enum.TextXAlignment.Right,
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -60, 0, 5),
+        Position = UDim2.new(1, -70, 0, 5),
         TextSize = textsize.Normal,
-        Size = UDim2.new(0, 50, 0, 20),
+        Size = UDim2.new(0, 60, 0, 20),
         Parent = frame
     })
 
@@ -1409,7 +1442,7 @@ function Library._CreateSlider(tab, config)
         Name = "SliderFill",
         BackgroundColor3 = c.Accent,
         BorderSizePixel = 0,
-        Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
+        Size = UDim2.new((currentValue - min) / math.max(max - min, 0.001), 0, 1, 0),
         Parent = sliderBg
     })
     CreateCorner(sliderFill, 100)
@@ -1421,9 +1454,11 @@ function Library._CreateSlider(tab, config)
         local framePos = sliderBg.AbsolutePosition
         local frameSize = sliderBg.AbsoluteSize
         local relativeX = math.clamp((pos.X - framePos.X) / frameSize.X, 0, 1)
-        currentValue = math.floor(min + (max - min) * relativeX)
-        sliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
-        valueLabel.Text = tostring(currentValue)
+        local rawValue = min + (max - min) * relativeX
+        currentValue = Round(rawValue)
+        local displayX = (currentValue - min) / math.max(max - min, 0.001)
+        sliderFill.Size = UDim2.new(displayX, 0, 1, 0)
+        valueLabel.Text = FormatValue(currentValue)
         callback(currentValue)
     end
 
@@ -1448,10 +1483,10 @@ function Library._CreateSlider(tab, config)
 
     local methods = {
         SetValue = function(_, value)
-            currentValue = math.clamp(value, min, max)
-            local relativeX = (currentValue - min) / (max - min)
+            currentValue = Round(math.clamp(value, min, max))
+            local relativeX = (currentValue - min) / math.max(max - min, 0.001)
             sliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
-            valueLabel.Text = tostring(currentValue)
+            valueLabel.Text = FormatValue(currentValue)
             callback(currentValue)
         end,
         GetValue = function()
@@ -2142,8 +2177,10 @@ function Library._CreateDropdown(tab, config)
         Parent = selectedDisplay
     })
 
+    local searchEnabled = config.SearchBox ~= false and #options > 5
+    local searchHeight = searchEnabled and 32 or 0
     local maxVisibleOptions = 5
-    local totalOptionsHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
+    local totalOptionsHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight) + searchHeight
 
     local optionsContainer = CreateInstance("Frame", {
         Name = "OptionsContainer",
@@ -2160,11 +2197,46 @@ function Library._CreateDropdown(tab, config)
     CreateCorner(optionsContainer, 5)
     CreateStroke(optionsContainer)
 
+    -- Search box (only if more than 5 options)
+    local searchBox = nil
+    if searchEnabled then
+        local searchBg = CreateInstance("Frame", {
+            Name = "SearchBg",
+            BackgroundColor3 = c.Background,
+            BackgroundTransparency = 0.3,
+            Position = UDim2.new(0, 6, 0, 6),
+            Size = UDim2.new(1, -12, 0, 20),
+            BorderSizePixel = 0,
+            ZIndex = 101,
+            Parent = optionsContainer
+        })
+        CreateCorner(searchBg, 4)
+        CreateStroke(searchBg, c.Border, 0)
+
+        searchBox = CreateInstance("TextBox", {
+            Name = "Search",
+            FontFace = f.Regular,
+            TextColor3 = c.Text,
+            PlaceholderText = "Search...",
+            PlaceholderColor3 = c.TextDark,
+            Text = "",
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextSize = textsize.Small,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, -8, 1, 0),
+            Position = UDim2.new(0, 6, 0, 0),
+            ClearTextOnFocus = false,
+            ZIndex = 102,
+            Parent = searchBg
+        })
+    end
+
     local optionsScroll = CreateInstance("ScrollingFrame", {
         Name = "OptionsScroll",
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, searchHeight),
+        Size = UDim2.new(1, 0, 1, -searchHeight),
         CanvasSize = UDim2.new(0, 0, 0, #options * s.Dropdown.OptionHeight),
         ScrollBarThickness = 3,
         ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60),
@@ -2232,6 +2304,24 @@ function Library._CreateDropdown(tab, config)
         CreateOptionButton(option)
     end
 
+    -- Search filter
+    if searchBox then
+        searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+            local query = searchBox.Text:lower()
+            local visible = 0
+            for _, child in ipairs(optionsScroll:GetChildren()) do
+                if child:IsA("TextButton") then
+                    local matches = query == "" or child.Name:lower():find(query, 1, true)
+                    child.Visible = matches ~= nil and matches ~= false
+                    if child.Visible then visible = visible + 1 end
+                end
+            end
+            local newH = math.min(visible * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
+            optionsScroll.CanvasSize = UDim2.new(0, 0, 0, visible * s.Dropdown.OptionHeight)
+            optionsContainer.Size = UDim2.new(0, 135, 0, newH + searchHeight)
+        end)
+    end
+
     local toggleBtn = CreateInstance("TextButton", {
         Name = "ToggleBtn",
         Text = "",
@@ -2246,6 +2336,9 @@ function Library._CreateDropdown(tab, config)
         optionsContainer.Visible = expanded
         arrow.Rotation = expanded and 180 or 0
         frame.ZIndex = expanded and 10 or 1
+        if not expanded and searchBox then
+            searchBox.Text = ""
+        end
     end)
 
     local methods = {
@@ -2920,6 +3013,188 @@ function Library._CreateProgressBar(tab, config)
             Refresh(current)
         end
     }
+end
+
+function Library._CreateTable(tab, config)
+    local name    = config.Name    or "Table"
+    local columns = config.Columns or {"Name", "Value"}
+    local rowHeight = config.RowHeight or 28
+    local maxVisible = config.MaxVisible or 6
+    local data = {}
+
+    local colCount = #columns
+
+    -- Outer container
+    local frame = CreateInstance("Frame", {
+        Name = "Table_" .. name,
+        BackgroundColor3 = c.Secondary,
+        BackgroundTransparency = 0.4,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        ClipsDescendants = true,
+        Parent = tab.content
+    })
+    CreateCorner(frame, 5)
+    CreateStroke(frame)
+
+    -- Title
+    local titleLabel = CreateInstance("TextLabel", {
+        Name = "Title",
+        FontFace = f.Regular,
+        TextColor3 = c.Text,
+        Text = name,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 0, 6),
+        TextSize = textsize.Normal,
+        Size = UDim2.new(1, -20, 0, 20),
+        Parent = frame
+    })
+
+    -- Header row
+    local headerRow = CreateInstance("Frame", {
+        Name = "Header",
+        BackgroundColor3 = c.Background,
+        BackgroundTransparency = 0.2,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 30),
+        Size = UDim2.new(1, 0, 0, 26),
+        Parent = frame
+    })
+
+    for i, col in ipairs(columns) do
+        local xPos = (i - 1) / colCount
+        local w = 1 / colCount
+        CreateInstance("TextLabel", {
+            FontFace = f.Bold,
+            TextColor3 = c.TextDark,
+            Text = col,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(xPos, i == 1 and 10 or 4, 0, 0),
+            Size = UDim2.new(w, i == 1 and -10 or -4, 1, 0),
+            TextSize = textsize.Small,
+            Parent = headerRow
+        })
+    end
+
+    -- Divider under header
+    CreateInstance("Frame", {
+        BackgroundColor3 = c.Border,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 56),
+        Size = UDim2.new(1, 0, 0, 1),
+        Parent = frame
+    })
+
+    -- Scrolling body
+    local bodyScroll = CreateInstance("ScrollingFrame", {
+        Name = "Body",
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 57),
+        Size = UDim2.new(1, 0, 0, 0),
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60),
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        Parent = frame
+    })
+    CreateListLayout(bodyScroll, 0, Enum.SortOrder.LayoutOrder)
+
+    -- Constraint to limit visible rows
+    local sizeConstraint = CreateInstance("UITextSizeConstraint" and "Frame", {
+        Name = "SizeLimit",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 0),
+        Parent = frame
+    })
+
+    local rowFrames = {}
+
+    local function RefreshHeight()
+        local visibleRows = math.min(#data, maxVisible)
+        local h = visibleRows * rowHeight
+        bodyScroll.Size = UDim2.new(1, 0, 0, h)
+        frame.Size = UDim2.new(1, 0, 0, 57 + h + (h > 0 and 6 or 0))
+    end
+
+    local function RenderRows()
+        -- Clear existing
+        for _, r in ipairs(rowFrames) do
+            if r and r.Parent then r:Destroy() end
+        end
+        rowFrames = {}
+
+        for idx, row in ipairs(data) do
+            local isEven = idx % 2 == 0
+            local rowFrame = CreateInstance("Frame", {
+                Name = "Row_" .. idx,
+                BackgroundColor3 = isEven and c.Background or c.Secondary,
+                BackgroundTransparency = isEven and 0.5 or 0.8,
+                BorderSizePixel = 0,
+                Size = UDim2.new(1, 0, 0, rowHeight),
+                LayoutOrder = idx,
+                Parent = bodyScroll
+            })
+
+            for i = 1, colCount do
+                local cellVal = tostring(row[i] or "")
+                local xPos = (i - 1) / colCount
+                local w = 1 / colCount
+                CreateInstance("TextLabel", {
+                    FontFace = f.Regular,
+                    TextColor3 = c.Text,
+                    Text = cellVal,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(xPos, i == 1 and 10 or 4, 0, 0),
+                    Size = UDim2.new(w, i == 1 and -10 or -4, 1, 0),
+                    TextSize = textsize.Small,
+                    Parent = rowFrame
+                })
+            end
+
+            table.insert(rowFrames, rowFrame)
+        end
+
+        RefreshHeight()
+    end
+
+    RefreshHeight()
+
+    local methods = {
+        AddRow = function(_, rowData)
+            table.insert(data, rowData)
+            RenderRows()
+        end,
+        RemoveRow = function(_, index)
+            if index >= 1 and index <= #data then
+                table.remove(data, index)
+                RenderRows()
+            end
+        end,
+        ClearRows = function(_)
+            data = {}
+            RenderRows()
+        end,
+        SetData = function(_, newData)
+            data = newData
+            RenderRows()
+        end,
+        GetData = function()
+            return data
+        end,
+        SetTitle = function(_, text)
+            titleLabel.Text = text
+        end
+    }
+
+    return methods
 end
 
 function Library._CreateConfigSection(tab)
