@@ -72,6 +72,16 @@ local Connections = {}
 local NotificationQueue = {}
 local NotificationContainer = nil
 
+-- Single global InputChanged handler — avoids N connections firing on every mouse move
+Library._activeDragger = nil  -- set to a function by whichever element is currently being dragged
+ui.InputChanged:Connect(function(input)
+    if Library._activeDragger and
+       (input.UserInputType == Enum.UserInputType.MouseMovement or
+        input.UserInputType == Enum.UserInputType.Touch) then
+        Library._activeDragger(input)
+    end
+end)
+
 local function CreateTween(instance, properties, duration, easingStyle, easingDirection)
     local tween = ts:Create(
         instance,
@@ -141,7 +151,7 @@ end
 
 local function MakeDraggable(frame, handle)
     local dragging = false
-    local dragInput, dragStart, startPos
+    local dragStart, startPos
     handle = handle or frame
 
     local function OnInputBegan(input)
@@ -149,38 +159,27 @@ local function MakeDraggable(frame, handle)
             dragging = true
             dragStart = input.Position
             startPos = frame.Position
+            Library._activeDragger = function(inp)
+                if dragging then
+                    local delta = inp.Position - dragStart
+                    frame.Position = UDim2.new(
+                        startPos.X.Scale, startPos.X.Offset + delta.X,
+                        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+                    )
+                end
+            end
             local connection
             connection = input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
-                    if connection then
-                        connection:Disconnect()
-                    end
+                    Library._activeDragger = nil
+                    if connection then connection:Disconnect() end
                 end
             end)
         end
     end
 
-    local function OnInputChanged(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end
-
     handle.InputBegan:Connect(OnInputBegan)
-    handle.InputChanged:Connect(OnInputChanged)
-
-    ui.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
 end
 
 local function DisconnectAll()
@@ -458,6 +457,15 @@ function Library:_SetupMobileSupport()
             dragging = true
             dragStart = input.Position
             startPos = mobileButton.Position
+            Library._activeDragger = function(inp)
+                if dragging then
+                    local delta = inp.Position - dragStart
+                    mobileButton.Position = UDim2.new(
+                        startPos.X.Scale, startPos.X.Offset + delta.X,
+                        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+                    )
+                end
+            end
         end
     end)
 
@@ -470,18 +478,7 @@ function Library:_SetupMobileSupport()
                 end
             end
             dragging = false
-        end
-    end)
-
-    ui.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
-            local delta = input.Position - dragStart
-            mobileButton.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
+            Library._activeDragger = nil
         end
     end)
 
@@ -692,27 +689,24 @@ function Library:_SetupSmartResize(handle)
             startSize = self.container.AbsoluteSize
             startPos = self.container.AbsolutePosition
             self._originalHeight = startSize.Y
-
+            Library._activeDragger = function(inp)
+                if resizing then
+                    local delta = inp.Position - resizeStart
+                    local newWidth = math.clamp(startSize.X + delta.X, self._minSize.X, self._maxSize.X)
+                    local newHeight = math.clamp(startSize.Y + delta.Y, self._minSize.Y, self._maxSize.Y)
+                    self.container.Size = UDim2.new(0, newWidth, 0, newHeight)
+                    self._originalHeight = newHeight
+                end
+            end
             local connection
             connection = input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     resizing = false
+                    Library._activeDragger = nil
                     handle.ImageColor3 = Color3.fromRGB(110, 110, 110)
-                    if connection then
-                        connection:Disconnect()
-                    end
+                    if connection then connection:Disconnect() end
                 end
             end)
-        end
-    end)
-
-    ui.InputChanged:Connect(function(input)
-        if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - resizeStart
-            local newWidth = math.clamp(startSize.X + delta.X, self._minSize.X, self._maxSize.X)
-            local newHeight = math.clamp(startSize.Y + delta.Y, self._minSize.Y, self._maxSize.Y)
-            self.container.Size = UDim2.new(0, newWidth, 0, newHeight)
-            self._originalHeight = newHeight
         end
     end)
 end
@@ -1466,18 +1460,14 @@ function Library._CreateSlider(tab, config)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             UpdateSlider(input)
+            Library._activeDragger = function(inp) UpdateSlider(inp) end
         end
     end)
 
     sliderBg.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
-        end
-    end)
-
-    ui.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            UpdateSlider(input)
+            Library._activeDragger = nil
         end
     end)
 
@@ -2746,6 +2736,7 @@ function Library._CreateColorPicker(tab, config)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             svDragging = true
             ProcessInput(input)
+            Library._activeDragger = ProcessInput
         end
     end)
 
@@ -2753,12 +2744,7 @@ function Library._CreateColorPicker(tab, config)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             hueDragging = true
             ProcessInput(input)
-        end
-    end)
-
-    ui.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            ProcessInput(input)
+            Library._activeDragger = ProcessInput
         end
     end)
 
@@ -2766,6 +2752,7 @@ function Library._CreateColorPicker(tab, config)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             svDragging = false
             hueDragging = false
+            Library._activeDragger = nil
         end
     end)
 
