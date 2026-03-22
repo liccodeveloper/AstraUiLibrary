@@ -1,21 +1,3 @@
---[[
-    ╔══════════════════════════════════════════╗
-    ║           ASTRA UI LIBRARY               ║
-    ╠══════════════════════════════════════════╣
-    ║  Versão    : 1.1.0                       ║
-    ║  Descrição : UI Library para executores  ║
-    ╚══════════════════════════════════════════╝
-
-    CHANGES v1.1.0:
-    • ScreenGui agora parenta em gethui()/CoreGui
-      ao invés de PlayerGui — UI persiste entre mapas
-      e fica sobre a interface nativa do Roblox
-    • Renomeado _CreateMainv0rtexd → _CreateMainAstra
-    • Renomeado _Createv0rtexdControls → _CreateAstraControls
-    • Renomeado size keys v0rtexd/Minv0rtexd/Maxv0rtexd
-      → Astra/MinAstra/MaxAstra
-]]
-
 local ts = game:GetService("TweenService")
 local ui = game:GetService("UserInputService")
 local plr = game:GetService("Players")
