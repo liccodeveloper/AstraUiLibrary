@@ -38,7 +38,7 @@ local s = {
     MinAstra = {Width = 500, Height = 300},
     MaxAstra = {Width = 1200, Height = 800},
     Toggle = {Width = 38, Height = 21, Circle = 13},
-    Button = {Height = 39},
+    Button = {Height = 39, HeightWithDesc = 55},
     Slider = {Height = 46},
     Dropdown = {Height = 39, OptionHeight = 30},
     Tab = {Width = 135, Height = 35},
@@ -1112,7 +1112,8 @@ function Library._CreateLabel(tab, config)
     return {
         SetText  = function(_, t) label.Text = t end,
         SetColor = function(_, c) label.TextColor3 = c end,
-        GetText  = function() return label.Text end
+        GetText  = function() return label.Text end,
+        _frame   = label
     }
 end
 
@@ -1234,18 +1235,27 @@ function Library._CreateSlider(tab, config)
         tab._library:_RegisterConfigElement(flag, "Slider", function() return currentValue end, function(v) methods:SetValue(v) end)
     end
 
+    methods._frame = frame
     return methods
 end
 
 function Library._CreateButton(tab, config)
     local name     = config.Name     or "Button"
     local callback = config.Callback or function() end
+    local desc     = config.Description
 
-    local frame = CreateInstance("Frame", { Name = "Button_" .. name, BackgroundColor3 = c.Secondary, BackgroundTransparency = 0.4, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, s.Button.Height), Parent = tab.content })
+    local frameHeight = desc and s.Button.HeightWithDesc or s.Button.Height
+    local frame = CreateInstance("Frame", { Name = "Button_" .. name, BackgroundColor3 = c.Secondary, BackgroundTransparency = 0.4, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, frameHeight), Parent = tab.content })
     CreateCorner(frame, 5); CreateStroke(frame)
 
-    local nameLabel = CreateInstance("TextLabel", { Name = "Name", FontFace = f.Regular, TextColor3 = c.Text, Text = name, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0.5, -10), TextSize = textsize.Normal, Size = UDim2.new(0, 200, 0, 20), Parent = frame })
-    local icon = CreateInstance("ImageLabel", { Name = "Icon", BackgroundTransparency = 1, Image = "rbxassetid://10734898355", ImageColor3 = c.Text, Position = UDim2.new(1, -30, 0.5, -10), Size = UDim2.new(0, 20, 0, 20), Parent = frame })
+    local nameYOffset = desc and -16 or -10
+    local nameLabel = CreateInstance("TextLabel", { Name = "Name", FontFace = f.Regular, TextColor3 = c.Text, Text = name, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0.5, nameYOffset), TextSize = textsize.Normal, Size = UDim2.new(0, 200, 0, 20), Parent = frame })
+    
+    if desc then
+        CreateInstance("TextLabel", { Name = "Description", FontFace = f.Regular, TextColor3 = c.TextDark, Text = desc, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0.5, 2), TextSize = textsize.Tiny, Size = UDim2.new(1, -50, 0, 16), Parent = frame })
+    end
+
+    local icon = CreateInstance("ImageLabel", { Name = "Icon", BackgroundTransparency = 1, Image = "rbxassetid://10734898355", ImageColor3 = c.Text, Position = UDim2.new(1, -30, 0.5, nameYOffset), Size = UDim2.new(0, 20, 0, 20), Parent = frame })
     CreateInstance("UIAspectRatioConstraint", { Parent = icon })
 
     local button = CreateInstance("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Parent = frame })
@@ -1256,7 +1266,9 @@ function Library._CreateButton(tab, config)
         callback()
     end)
 
-    return { SetText = function(_, t) nameLabel.Text = t end }
+    local methods = { SetText = function(_, t) nameLabel.Text = t end }
+    methods._frame = frame
+    return methods
 end
 
 function Library._CreateToggle(tab, config)
@@ -1264,14 +1276,21 @@ function Library._CreateToggle(tab, config)
     local default  = config.Default  or false
     local callback = config.Callback or function() end
     local flag     = config.Flag
+    local desc     = config.Description
     local enabled  = default
 
-    local frame = CreateInstance("Frame", { Name = "Toggle_" .. name, BackgroundColor3 = c.Secondary, BackgroundTransparency = 0.4, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, s.Button.Height), Parent = tab.content })
+    local frameHeight = desc and s.Button.HeightWithDesc or s.Button.Height
+    local frame = CreateInstance("Frame", { Name = "Toggle_" .. name, BackgroundColor3 = c.Secondary, BackgroundTransparency = 0.4, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, frameHeight), Parent = tab.content })
     CreateCorner(frame, 5); CreateStroke(frame)
 
-    CreateInstance("TextLabel", { Name = "Name", FontFace = f.Regular, TextColor3 = c.Text, Text = name, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0.5, -10), TextSize = textsize.Normal, Size = UDim2.new(0, 200, 0, 20), Parent = frame })
+    local nameYOffset = desc and -16 or -10
+    CreateInstance("TextLabel", { Name = "Name", FontFace = f.Regular, TextColor3 = c.Text, Text = name, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0.5, nameYOffset), TextSize = textsize.Normal, Size = UDim2.new(0, 200, 0, 20), Parent = frame })
 
-    local switchBg = CreateInstance("Frame", { Name = "SwitchBackground", BackgroundColor3 = enabled and c.Toggle.Enabled or c.Toggle.Disabled, Position = UDim2.new(1, -48, 0.5, -10), BorderSizePixel = 0, Size = UDim2.new(0, s.Toggle.Width, 0, s.Toggle.Height), Parent = frame })
+    if desc then
+        CreateInstance("TextLabel", { Name = "Description", FontFace = f.Regular, TextColor3 = c.TextDark, Text = desc, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0.5, 2), TextSize = textsize.Tiny, Size = UDim2.new(1, -70, 0, 16), Parent = frame })
+    end
+
+    local switchBg = CreateInstance("Frame", { Name = "SwitchBackground", BackgroundColor3 = enabled and c.Toggle.Enabled or c.Toggle.Disabled, Position = UDim2.new(1, -48, 0.5, nameYOffset), BorderSizePixel = 0, Size = UDim2.new(0, s.Toggle.Width, 0, s.Toggle.Height), Parent = frame })
     CreateCorner(switchBg, 100)
 
     local switchCircle = CreateInstance("Frame", { Name = "Circle", BackgroundColor3 = c.Toggle.Circle, AnchorPoint = Vector2.new(0, 0.5), Position = enabled and UDim2.new(0, 21, 0.5, 0) or UDim2.new(0, 4, 0.5, 0), BorderSizePixel = 0, Size = UDim2.new(0, s.Toggle.Circle, 0, s.Toggle.Circle), Parent = switchBg })
@@ -1281,9 +1300,24 @@ function Library._CreateToggle(tab, config)
 
     local button = CreateInstance("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Parent = frame })
 
+    local methods = {}
+    methods._children = {}
+    methods._frame = frame
+
+    function methods:_UpdateChildren()
+        for _, child in ipairs(self._children) do
+            if child._frame then
+                child._frame.Visible = enabled
+            end
+        end
+    end
+
     local function UpdateToggle()
         switchBg.BackgroundColor3 = enabled and c.Toggle.Enabled or c.Toggle.Disabled
         switchCircle.Position     = enabled and UDim2.new(0, 21, 0.5, 0) or UDim2.new(0, 4, 0.5, 0)
+        if methods._children and #methods._children > 0 then
+            methods:_UpdateChildren()
+        end
     end
 
     button.MouseButton1Click:Connect(function()
@@ -1292,10 +1326,12 @@ function Library._CreateToggle(tab, config)
         callback(enabled)
     end)
 
-    local methods = {
-        SetValue = function(_, value) enabled = value; UpdateToggle(); callback(enabled) end,
-        GetValue = function() return enabled end
-    }
+    function methods:SetValue(value) enabled = value; UpdateToggle(); callback(enabled) end
+    function methods:GetValue() return enabled end
+    function methods:SetChildren(children)
+        self._children = children
+        self:_UpdateChildren()
+    end
 
     if flag and tab._library then
         tab._library:_RegisterConfigElement(flag, "Toggle", function() return enabled end, function(v) methods:SetValue(v) end)
@@ -1340,6 +1376,7 @@ function Library._CreateCheckbox(tab, config)
         tab._library:_RegisterConfigElement(flag, "Checkbox", function() return enabled end, function(v) methods:SetValue(v) end)
     end
 
+    methods._frame = frame
     return methods
 end
 
@@ -1393,6 +1430,7 @@ function Library._CreateRadioGroup(tab, config)
         tab._library:_RegisterConfigElement(flag, "RadioGroup", function() return selected end, function(v) methods:SetValue(v) end)
     end
 
+    methods._frame = frame
     return methods
 end
 
@@ -1522,6 +1560,7 @@ function Library._CreateDropdown(tab, config)
         lib:_RegisterConfigElement(flag, "Dropdown", function() return selected end, function(v) methods:SetValue(v) end)
     end
 
+    methods._frame = frame
     return methods
 end
 
@@ -1598,6 +1637,7 @@ function Library._CreateKeybind(tab, config, lib)
         lib:_RegisterConfigElement(flag, "Keybind", function() return currentKey end, function(v) methods:SetKey(v) end)
     end
 
+    methods._frame = frame
     return methods
 end
 
@@ -1700,6 +1740,7 @@ function Library._CreateColorPicker(tab, config)
         tab._library:_RegisterConfigElement(flag, "ColorPicker", function() return currentColor end, function(v) methods:SetColor(v) end)
     end
 
+    methods._frame = frame
     return methods
 end
 
@@ -1757,6 +1798,7 @@ function Library._CreateTextBox(tab, config)
         tab._library:_RegisterConfigElement(flag, "TextBox", function() return currentText end, function(v) methods:SetText(v) end)
     end
 
+    methods._frame = frame
     return methods
 end
 
@@ -1790,7 +1832,8 @@ function Library._CreateProgressBar(tab, config)
         SetValue = function(_, v) Refresh(v) end,
         GetValue = function() return current end,
         SetMax   = function(_, v) max = v; Refresh(current) end,
-        SetMin   = function(_, v) min = v; Refresh(current) end
+        SetMin   = function(_, v) min = v; Refresh(current) end,
+        _frame   = frame
     }
 end
 
