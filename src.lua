@@ -669,7 +669,7 @@ function Library:_CreateContentArea()
 
     self.contentContainer = CreateInstance("ScrollingFrame", {
         Name = "ContentContainer",
-        ScrollBarThickness = 3,
+        ScrollBarThickness = 0,
         ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60),
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 166, 0, 0),
@@ -1255,7 +1255,7 @@ function Library._CreateButton(tab, config)
         CreateInstance("TextLabel", { Name = "Description", FontFace = f.Regular, TextColor3 = c.TextDark, Text = desc, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0.5, 2), TextSize = textsize.Tiny, Size = UDim2.new(1, -50, 0, 16), Parent = frame })
     end
 
-    local icon = CreateInstance("ImageLabel", { Name = "Icon", BackgroundTransparency = 1, Image = "rbxassetid://10734898355", ImageColor3 = c.Text, Position = UDim2.new(1, -30, 0.5, nameYOffset), Size = UDim2.new(0, 20, 0, 20), Parent = frame })
+    local icon = CreateInstance("ImageLabel", { Name = "Icon", BackgroundTransparency = 1, Image = "rbxassetid://10734898355", ImageColor3 = c.Text, Position = UDim2.new(1, -30, 0.5, -10), Size = UDim2.new(0, 20, 0, 20), Parent = frame })
     CreateInstance("UIAspectRatioConstraint", { Parent = icon })
 
     local button = CreateInstance("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Parent = frame })
@@ -1290,7 +1290,7 @@ function Library._CreateToggle(tab, config)
         CreateInstance("TextLabel", { Name = "Description", FontFace = f.Regular, TextColor3 = c.TextDark, Text = desc, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0.5, 2), TextSize = textsize.Tiny, Size = UDim2.new(1, -70, 0, 16), Parent = frame })
     end
 
-    local switchBg = CreateInstance("Frame", { Name = "SwitchBackground", BackgroundColor3 = enabled and c.Toggle.Enabled or c.Toggle.Disabled, Position = UDim2.new(1, -48, 0.5, nameYOffset), BorderSizePixel = 0, Size = UDim2.new(0, s.Toggle.Width, 0, s.Toggle.Height), Parent = frame })
+    local switchBg = CreateInstance("Frame", { Name = "SwitchBackground", BackgroundColor3 = enabled and c.Toggle.Enabled or c.Toggle.Disabled, Position = UDim2.new(1, -48, 0.5, -10), BorderSizePixel = 0, Size = UDim2.new(0, s.Toggle.Width, 0, s.Toggle.Height), Parent = frame })
     CreateCorner(switchBg, 100)
 
     local switchCircle = CreateInstance("Frame", { Name = "Circle", BackgroundColor3 = c.Toggle.Circle, AnchorPoint = Vector2.new(0, 0.5), Position = enabled and UDim2.new(0, 21, 0.5, 0) or UDim2.new(0, 4, 0.5, 0), BorderSizePixel = 0, Size = UDim2.new(0, s.Toggle.Circle, 0, s.Toggle.Circle), Parent = switchBg })
