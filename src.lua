@@ -570,7 +570,7 @@ function Library:_CreateMainAstra()
 end
 
 function Library:_CreateMinimizeIcon()
-    local iconSize = 60
+    local iconSize = 100
 
     self._minimizeIcon = CreateInstance("Frame", {
         Name = "MinimizeIcon",
@@ -586,7 +586,7 @@ function Library:_CreateMinimizeIcon()
     CreateInstance("UIStroke", {
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
         Color = Color3.fromRGB(255, 255, 255),
-        Thickness = 6,
+        Thickness = 3,
         Parent = self._minimizeIcon
     })
 
@@ -601,19 +601,40 @@ function Library:_CreateMinimizeIcon()
     })
     CreateInstance("UIAspectRatioConstraint", { Parent = self._minimizeIconImage })
 
-    local clickBtn = CreateInstance("TextButton", {
-        Name = "ClickArea",
-        Text = "",
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
-        Parent = self._minimizeIcon
-    })
+    local dragging = false
+    local dragStart, startPos
 
-    clickBtn.MouseButton1Click:Connect(function()
-        self:_ToggleMinimize()
+    self._minimizeIcon.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging  = true
+            dragStart = input.Position
+            startPos  = self._minimizeIcon.Position
+            Library._activeDragger = function(inp)
+                if dragging then
+                    local delta = inp.Position - dragStart
+                    self._minimizeIcon.Position = UDim2.new(
+                        startPos.X.Scale, startPos.X.Offset + delta.X,
+                        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+                    )
+                end
+            end
+        end
     end)
 
-    MakeDraggable(self._minimizeIcon)
+    self._minimizeIcon.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            if dragging then
+                local delta = input.Position - dragStart
+                if delta.Magnitude < 10 then
+                    self:_ToggleMinimize()
+                end
+            end
+            dragging = false
+            Library._activeDragger = nil
+        end
+    end)
 end
 
 function Library:SetMinimizeIcon(imageId)
