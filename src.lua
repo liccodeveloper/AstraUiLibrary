@@ -510,8 +510,6 @@ function Library:_SetupMobileSupport()
     end
 end
 
--- ── _CreateMainAstra (anteriormente _CreateMainv0rtexd) ──────────────────────
-
 function Library:_CreateMainAstra()
     self.screenGui = CreateInstance("ScreenGui", {
         Name = n,
@@ -520,9 +518,6 @@ function Library:_CreateMainAstra()
         DisplayOrder = 100
     })
 
-    -- Parenta em gethui()/CoreGui ao invés de PlayerGui
-    -- Isso mantém a UI viva entre trocas de mapa e a coloca
-    -- acima da interface nativa do Roblox (igual ao Rayfield)
     ParentToProtectedGui(self.screenGui)
 
     self.container = CreateInstance("Frame", {
@@ -570,10 +565,62 @@ function Library:_CreateMainAstra()
     })
 
     self:_CreateContentArea()
+    self:_CreateMinimizeIcon()
     MakeDraggable(self.container, self.topBar)
 end
 
--- ── _CreateAstraControls (anteriormente _Createv0rtexdControls) ──────────────
+function Library:_CreateMinimizeIcon()
+    local iconSize = 60
+
+    self._minimizeIcon = CreateInstance("Frame", {
+        Name = "MinimizeIcon",
+        BackgroundColor3 = c.Background,
+        BackgroundTransparency = 0,
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Size = UDim2.new(0, iconSize, 0, iconSize),
+        Visible = false,
+        Parent = self.screenGui
+    })
+    CreateCorner(self._minimizeIcon, 30)
+    CreateInstance("UIStroke", {
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        Color = Color3.fromRGB(255, 255, 255),
+        Thickness = 6,
+        Parent = self._minimizeIcon
+    })
+
+    self._minimizeIconImage = CreateInstance("ImageLabel", {
+        Name = "Logo",
+        BackgroundTransparency = 1,
+        Image = "",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Size = UDim2.new(0.6, 0, 0.6, 0),
+        Parent = self._minimizeIcon
+    })
+    CreateInstance("UIAspectRatioConstraint", { Parent = self._minimizeIconImage })
+
+    local clickBtn = CreateInstance("TextButton", {
+        Name = "ClickArea",
+        Text = "",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Parent = self._minimizeIcon
+    })
+
+    clickBtn.MouseButton1Click:Connect(function()
+        self:_ToggleMinimize()
+    end)
+
+    MakeDraggable(self._minimizeIcon)
+end
+
+function Library:SetMinimizeIcon(imageId)
+    if self._minimizeIconImage then
+        self._minimizeIconImage.Image = imageId
+    end
+end
 
 function Library:_CreateAstraControls()
     local minimizeBtn = CreateInstance("ImageLabel", {
@@ -730,13 +777,17 @@ end
 function Library:_ToggleMinimize()
     self.minimized = not self.minimized
     if self.minimized then
-        self.mainContent.Size = UDim2.new(1, 0, 0, 0)
-        self.container.Size   = UDim2.new(0, self.container.AbsoluteSize.X, 0, 45)
-        if self.resizeBtn then self.resizeBtn.Visible = false end
+        if self._minimizeIcon then
+            self._minimizeIcon.Position = UDim2.new(
+                0, self.container.AbsolutePosition.X + 30,
+                0, self.container.AbsolutePosition.Y + 22
+            )
+        end
+        self.container.Visible = false
+        if self._minimizeIcon then self._minimizeIcon.Visible = true end
     else
-        self.container.Size   = UDim2.new(0, self.container.AbsoluteSize.X, 0, self._originalHeight)
-        self.mainContent.Size = UDim2.new(1, 0, 1, -46)
-        if self.resizeBtn then self.resizeBtn.Visible = true end
+        self.container.Visible = true
+        if self._minimizeIcon then self._minimizeIcon.Visible = false end
     end
 end
 
