@@ -443,8 +443,17 @@ end
 function Library:Toggle()
     self._visible = not self._visible
     self.container.Visible = self._visible
+    if self._minimizeIcon then
+        if not self._visible then
+            self._minimizeIcon.Position = UDim2.new(
+                0, self.container.AbsolutePosition.X + 50,
+                0, self.container.AbsolutePosition.Y + 50
+            )
+        end
+        self._minimizeIcon.Visible = not self._visible
+    end
     if self._mobileToggle then
-        self._mobileToggle.Visible = not self._visible
+        self._mobileToggle.Visible = false
     end
 end
 
@@ -798,15 +807,17 @@ end
 function Library:_ToggleMinimize()
     self.minimized = not self.minimized
     if self.minimized then
+        self._visible = false
         if self._minimizeIcon then
             self._minimizeIcon.Position = UDim2.new(
-                0, self.container.AbsolutePosition.X + 30,
-                0, self.container.AbsolutePosition.Y + 22
+                0, self.container.AbsolutePosition.X + 50,
+                0, self.container.AbsolutePosition.Y + 50
             )
         end
         self.container.Visible = false
         if self._minimizeIcon then self._minimizeIcon.Visible = true end
     else
+        self._visible = true
         self.container.Visible = true
         if self._minimizeIcon then self._minimizeIcon.Visible = false end
     end
