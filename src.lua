@@ -433,8 +433,17 @@ function Library:_SetupKeybindListener()
             self:Toggle()
         end
         for _, keybindData in pairs(self._keybinds) do
-            if input.KeyCode == keybindData.key then
-                keybindData.callback()
+            local key = keybindData.key
+            if typeof(key) == "EnumItem" then
+                if key.EnumType == Enum.UserInputType then
+                    if input.UserInputType == key then
+                        keybindData.callback()
+                    end
+                else
+                    if input.KeyCode == key then
+                        keybindData.callback()
+                    end
+                end
             end
         end
     end)
@@ -1684,14 +1693,22 @@ function Library._CreateKeybind(tab, config, lib)
     local keybindId = name .. "_" .. tostring(tick())
     lib._keybinds[keybindId] = { key = currentKey, callback = FireAction }
 
+    local shortNames = {
+        MouseButton1 = "M1", MouseButton2 = "M2",
+        RightControl = "RCtrl", LeftControl = "LCtrl",
+        RightShift = "RShift", LeftShift = "LShift",
+        RightAlt = "RAlt", LeftAlt = "LAlt",
+    }
+
     local function UpdateKeyDisplay()
         if listening then
             keyLabel.Text = "..."
             keybindBox.Size = UDim2.new(0, 43, 0, 26)
         else
             local keyName = currentKey.Name
-            keybindBox.Size = UDim2.new(0, math.max(#keyName * 9 + 10, 24), 0, 26)
-            keyLabel.Text = keyName
+            local displayName = shortNames[keyName] or keyName
+            keybindBox.Size = UDim2.new(0, math.max(#displayName * 9 + 10, 24), 0, 26)
+            keyLabel.Text = displayName
         end
     end
 
@@ -1699,10 +1716,16 @@ function Library._CreateKeybind(tab, config, lib)
 
     local inputConnection = ui.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
-        if listening and input.UserInputType == Enum.UserInputType.Keyboard then
-            local ignore = { [Enum.KeyCode.LeftShift]=true, [Enum.KeyCode.RightShift]=true, [Enum.KeyCode.LeftControl]=true, [Enum.KeyCode.RightControl]=true, [Enum.KeyCode.LeftAlt]=true, [Enum.KeyCode.RightAlt]=true, [Enum.KeyCode.LeftMeta]=true, [Enum.KeyCode.RightMeta]=true }
-            if not ignore[input.KeyCode] then
-                currentKey = input.KeyCode; listening = false
+        if listening then
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                local ignore = { [Enum.KeyCode.LeftShift]=true, [Enum.KeyCode.RightShift]=true, [Enum.KeyCode.LeftControl]=true, [Enum.KeyCode.RightControl]=true, [Enum.KeyCode.LeftAlt]=true, [Enum.KeyCode.RightAlt]=true, [Enum.KeyCode.LeftMeta]=true, [Enum.KeyCode.RightMeta]=true }
+                if not ignore[input.KeyCode] then
+                    currentKey = input.KeyCode; listening = false
+                    lib._keybinds[keybindId].key = currentKey; UpdateKeyDisplay()
+                end
+            elseif input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.MouseButton2 then
+                currentKey = input.UserInputType; listening = false
                 lib._keybinds[keybindId].key = currentKey; UpdateKeyDisplay()
             end
         end
