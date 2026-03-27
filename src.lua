@@ -591,11 +591,11 @@ function Library:_CreateMinimizeIcon()
         Visible = false,
         Parent = self.screenGui
     })
-    CreateCorner(self._minimizeIcon, 04)
+    CreateCorner(self._minimizeIcon, 10)
     CreateInstance("UIStroke", {
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
         Color = Color3.fromRGB(255, 255, 255),
-        Thickness = 3,
+        Thickness = 2,
         Parent = self._minimizeIcon
     })
 
