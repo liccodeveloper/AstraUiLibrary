@@ -628,20 +628,18 @@ function Library:_CreateMinimizeIcon()
                     )
                 end
             end
-        end
-    end)
-
-    self._minimizeIcon.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            if dragging then
-                local delta = input.Position - dragStart
-                if delta.Magnitude < 10 then
-                    self:_ToggleMinimize()
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    if dragging then
+                        local delta = input.Position - dragStart
+                        if delta.Magnitude < 10 then
+                            self:_ToggleMinimize()
+                        end
+                    end
+                    dragging = false
+                    Library._activeDragger = nil
                 end
-            end
-            dragging = false
-            Library._activeDragger = nil
+            end)
         end
     end)
 end
