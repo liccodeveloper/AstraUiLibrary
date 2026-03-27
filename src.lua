@@ -579,7 +579,7 @@ function Library:_CreateMainAstra()
 end
 
 function Library:_CreateMinimizeIcon()
-    local iconSize = 30
+    local iconSize = 45
 
     self._minimizeIcon = CreateInstance("Frame", {
         Name = "MinimizeIcon",
