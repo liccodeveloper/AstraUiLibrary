@@ -1712,10 +1712,13 @@ function Library._CreateKeybind(tab, config, lib)
         end
     end
 
-    button.MouseButton1Click:Connect(function() listening = true; UpdateKeyDisplay() end)
+    button.MouseButton1Click:Connect(function()
+        listening = true
+        UpdateKeyDisplay()
+        task.wait(0.2)
+    end)
 
     local inputConnection = ui.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
         if listening then
             if input.UserInputType == Enum.UserInputType.Keyboard then
                 local ignore = { [Enum.KeyCode.LeftShift]=true, [Enum.KeyCode.RightShift]=true, [Enum.KeyCode.LeftControl]=true, [Enum.KeyCode.RightControl]=true, [Enum.KeyCode.LeftAlt]=true, [Enum.KeyCode.RightAlt]=true, [Enum.KeyCode.LeftMeta]=true, [Enum.KeyCode.RightMeta]=true }
@@ -1728,7 +1731,9 @@ function Library._CreateKeybind(tab, config, lib)
                 currentKey = input.UserInputType; listening = false
                 lib._keybinds[keybindId].key = currentKey; UpdateKeyDisplay()
             end
+            return
         end
+        if gameProcessed then return end
     end)
 
     lib._connections["keybind_" .. keybindId] = inputConnection
