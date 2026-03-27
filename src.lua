@@ -579,7 +579,7 @@ function Library:_CreateMainAstra()
 end
 
 function Library:_CreateMinimizeIcon()
-    local iconSize = 45
+    local iconSize = 50
 
     self._minimizeIcon = CreateInstance("Frame", {
         Name = "MinimizeIcon",
@@ -591,7 +591,7 @@ function Library:_CreateMinimizeIcon()
         Visible = false,
         Parent = self.screenGui
     })
-    CreateCorner(self._minimizeIcon, 06)
+    CreateCorner(self._minimizeIcon, 04)
     CreateInstance("UIStroke", {
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
         Color = Color3.fromRGB(255, 255, 255),
