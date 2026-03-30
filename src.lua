@@ -272,6 +272,7 @@ function Library.new(title, configFolder, sizeConfig, options)
     self._currentConfig = "default"
     self._connections   = {}
     self._floatingButtons = {}
+    self._fabsEnabled     = false
 
     local opts = options or {}
     self._rgbEnabled    = opts.RGBEnabled == true
@@ -561,8 +562,12 @@ function Library:_CreateRGBGlow(targetFrame, cornerRadius, isIcon)
     })
     local function sync()
         if isIcon then
-            glow.Position = targetFrame.Position
-            glow.AnchorPoint = targetFrame.AnchorPoint
+            local ap = targetFrame.AnchorPoint
+            glow.AnchorPoint = ap
+            glow.Position = UDim2.new(
+                targetFrame.Position.X.Scale, targetFrame.Position.X.Offset + self._rgbThickness * (2 * ap.X - 1),
+                targetFrame.Position.Y.Scale, targetFrame.Position.Y.Offset + self._rgbThickness * (2 * ap.Y - 1)
+            )
         else
             glow.Position = UDim2.new(
                 targetFrame.Position.X.Scale, targetFrame.Position.X.Offset - self._rgbThickness,
@@ -740,11 +745,12 @@ function Library:SetMinimizeIcon(imageId)
 end
 
 function Library:CreateFloatingButton(config)
-    local text     = config.Text     or "Button"
-    local callback = config.Callback or function() end
-    local width    = config.Width    or 100
-    local height   = config.Height   or 42
-    local order    = #self._floatingButtons
+    local text      = config.Text      or "Button"
+    local callback  = config.Callback  or function() end
+    local condition = config.Condition
+    local width     = config.Width     or 100
+    local height    = config.Height    or 42
+    local order     = #self._floatingButtons
 
     local btnFrame = CreateInstance("Frame", {
         Name = "FloatingBtn_" .. text,
@@ -817,7 +823,7 @@ function Library:CreateFloatingButton(config)
         fabGlow, fabGrad = self:_CreateRGBGlow(btnFrame, 10, true)
     end
 
-    local fabData = {frame = btnFrame, glow = fabGlow, gradient = fabGrad}
+    local fabData = {frame = btnFrame, glow = fabGlow, gradient = fabGrad, condition = condition}
     table.insert(self._floatingButtons, fabData)
 
     return {
@@ -832,9 +838,15 @@ function Library:CreateFloatingButton(config)
 end
 
 function Library:SetFloatingButtonsVisible(visible)
+    self._fabsEnabled = visible
+    self:RefreshFloatingButtons()
+end
+
+function Library:RefreshFloatingButtons()
     for _, fab in ipairs(self._floatingButtons) do
-        fab.frame.Visible = visible
-        if fab.glow then fab.glow.Visible = visible end
+        local shouldShow = self._fabsEnabled and (fab.condition == nil or fab.condition())
+        fab.frame.Visible = shouldShow
+        if fab.glow then fab.glow.Visible = shouldShow end
     end
 end
 
