@@ -601,7 +601,7 @@ function Library:_CreateMainAstra()
         ClipsDescendants = false,
         Parent = self.screenGui
     })
-    CreateCorner(self.container, 5)
+    CreateCorner(self.container, 12)
     if not self._rgbEnabled then
         CreateStroke(self.container)
     end
@@ -639,7 +639,7 @@ function Library:_CreateMainAstra()
 
     self:_CreateContentArea()
     self.container.ZIndex = 1
-    self._rgbGlow, self._rgbGradient = self:_CreateRGBGlow(self.container, 5, false)
+    self._rgbGlow, self._rgbGradient = self:_CreateRGBGlow(self.container, 12, false)
 
     self:_CreateMinimizeIcon()
     MakeDraggable(self.container, self.topBar)
