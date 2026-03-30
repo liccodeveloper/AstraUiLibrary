@@ -271,6 +271,7 @@ function Library.new(title, configFolder, sizeConfig, options)
     self._autoSave      = false
     self._currentConfig = "default"
     self._connections   = {}
+    self._floatingButtons = {}
 
     local opts = options or {}
     self._rgbEnabled    = opts.RGBEnabled == true
@@ -652,6 +653,11 @@ function Library:_CreateMainAstra()
             if self._iconRgbGradient then
                 self._iconRgbGradient.Rotation = (self._iconRgbGradient.Rotation + self._rgbSpeed * dt) % 360
             end
+            for _, fab in ipairs(self._floatingButtons) do
+                if fab.gradient then
+                    fab.gradient.Rotation = (fab.gradient.Rotation + self._rgbSpeed * dt) % 360
+                end
+            end
         end)
     end
 end
@@ -730,6 +736,105 @@ end
 function Library:SetMinimizeIcon(imageId)
     if self._minimizeIconImage then
         self._minimizeIconImage.Image = imageId
+    end
+end
+
+function Library:CreateFloatingButton(config)
+    local text     = config.Text     or "Button"
+    local callback = config.Callback or function() end
+    local width    = config.Width    or 100
+    local height   = config.Height   or 42
+    local order    = #self._floatingButtons
+
+    local btnFrame = CreateInstance("Frame", {
+        Name = "FloatingBtn_" .. text,
+        BackgroundColor3 = c.Background,
+        BackgroundTransparency = 0,
+        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -15, 0, 120 + (order * (height + 12))),
+        Size = UDim2.new(0, width, 0, height),
+        Visible = false,
+        ZIndex = 998,
+        Parent = self.screenGui
+    })
+    CreateCorner(btnFrame, 10)
+    if not self._rgbEnabled then
+        CreateInstance("UIStroke", {
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+            Color = Color3.fromRGB(255, 255, 255),
+            Thickness = 2,
+            Parent = btnFrame
+        })
+    end
+
+    CreateInstance("TextLabel", {
+        Name = "Label",
+        FontFace = f.Bold,
+        TextColor3 = c.Text,
+        Text = text,
+        BackgroundTransparency = 1,
+        TextSize = textsize.Normal,
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = 999,
+        Parent = btnFrame
+    })
+
+    local dragging = false
+    local dragStart, startPos
+
+    btnFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging  = true
+            dragStart = input.Position
+            startPos  = btnFrame.Position
+            Library._activeDragger = function(inp)
+                if dragging then
+                    local delta = inp.Position - dragStart
+                    btnFrame.Position = UDim2.new(
+                        startPos.X.Scale, startPos.X.Offset + delta.X,
+                        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+                    )
+                end
+            end
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    if dragging then
+                        local delta = input.Position - dragStart
+                        if delta.Magnitude < 10 then
+                            callback()
+                        end
+                    end
+                    dragging = false
+                    Library._activeDragger = nil
+                end
+            end)
+        end
+    end)
+
+    local fabGlow, fabGrad
+    if self._rgbEnabled then
+        fabGlow, fabGrad = self:_CreateRGBGlow(btnFrame, 10, true)
+    end
+
+    local fabData = {frame = btnFrame, glow = fabGlow, gradient = fabGrad}
+    table.insert(self._floatingButtons, fabData)
+
+    return {
+        SetVisible = function(_, visible)
+            btnFrame.Visible = visible
+            if fabGlow then fabGlow.Visible = visible end
+        end,
+        SetText    = function(_, t) btnFrame:FindFirstChild("Label").Text = t end,
+        GetFrame   = function() return btnFrame end,
+        _frame     = btnFrame,
+    }
+end
+
+function Library:SetFloatingButtonsVisible(visible)
+    for _, fab in ipairs(self._floatingButtons) do
+        fab.frame.Visible = visible
+        if fab.glow then fab.glow.Visible = visible end
     end
 end
 
