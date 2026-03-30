@@ -4,6 +4,7 @@ local plr = game:GetService("Players")
 local gs = game:GetService("GuiService")
 local hs = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
+local rs = game:GetService("RunService")
 
 local n = "Astra"
 
@@ -272,6 +273,10 @@ function Library.new(title, configFolder, sizeConfig, options)
     self._connections   = {}
 
     local opts = options or {}
+    self._rgbEnabled    = opts.RGBEnabled == true
+    self._rgbSpeed      = opts.RGBSpeed or 60
+    self._rgbThickness  = opts.RGBThickness or 2
+
     if opts.AccentColor then
         c.Accent           = opts.AccentColor
         c.Toggle.Enabled   = opts.AccentColor
@@ -529,6 +534,53 @@ function Library:_SetupMobileSupport()
     end
 end
 
+function Library:_CreateRGBGlow(targetFrame, cornerRadius, isIcon)
+    if not self._rgbEnabled then return nil, nil end
+    local glow = CreateInstance("Frame", {
+        Name = targetFrame.Name .. "RGBGlow",
+        BackgroundColor3 = Color3.new(1, 1, 1),
+        BorderSizePixel = 0,
+        ZIndex = 0,
+        Visible = targetFrame.Visible,
+        Parent = self.screenGui
+    })
+    CreateCorner(glow, cornerRadius)
+    local grad = CreateInstance("UIGradient", {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+            ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
+            ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+            ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
+            ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0)),
+        }),
+        Rotation = 0,
+        Parent = glow
+    })
+    local function sync()
+        if isIcon then
+            glow.Position = targetFrame.Position
+            glow.AnchorPoint = targetFrame.AnchorPoint
+        else
+            glow.Position = UDim2.new(
+                targetFrame.Position.X.Scale, targetFrame.Position.X.Offset - self._rgbThickness,
+                targetFrame.Position.Y.Scale, targetFrame.Position.Y.Offset - self._rgbThickness
+            )
+        end
+        glow.Size = UDim2.new(
+            targetFrame.Size.X.Scale, targetFrame.Size.X.Offset + (self._rgbThickness * 2),
+            targetFrame.Size.Y.Scale, targetFrame.Size.Y.Offset + (self._rgbThickness * 2)
+        )
+        glow.Visible = targetFrame.Visible
+    end
+    self._connections["sync_glow_" .. targetFrame.Name .. "_pos"] = targetFrame:GetPropertyChangedSignal("Position"):Connect(sync)
+    self._connections["sync_glow_" .. targetFrame.Name .. "_size"] = targetFrame:GetPropertyChangedSignal("Size"):Connect(sync)
+    self._connections["sync_glow_" .. targetFrame.Name .. "_vis"] = targetFrame:GetPropertyChangedSignal("Visible"):Connect(sync)
+    sync()
+    return glow, grad
+end
+
 function Library:_CreateMainAstra()
     self.screenGui = CreateInstance("ScreenGui", {
         Name = n,
@@ -550,7 +602,9 @@ function Library:_CreateMainAstra()
         Parent = self.screenGui
     })
     CreateCorner(self.container, 5)
-    CreateStroke(self.container)
+    if not self._rgbEnabled then
+        CreateStroke(self.container)
+    end
 
     self.topBar = CreateInstance("Frame", {
         Name = "TopBar",
@@ -584,8 +638,22 @@ function Library:_CreateMainAstra()
     })
 
     self:_CreateContentArea()
+    self.container.ZIndex = 1
+    self._rgbGlow, self._rgbGradient = self:_CreateRGBGlow(self.container, 5, false)
+
     self:_CreateMinimizeIcon()
     MakeDraggable(self.container, self.topBar)
+
+    if self._rgbEnabled then
+        self._connections["rgb_render"] = rs.RenderStepped:Connect(function(dt)
+            if self._rgbGradient then
+                self._rgbGradient.Rotation = (self._rgbGradient.Rotation + self._rgbSpeed * dt) % 360
+            end
+            if self._iconRgbGradient then
+                self._iconRgbGradient.Rotation = (self._iconRgbGradient.Rotation + self._rgbSpeed * dt) % 360
+            end
+        end)
+    end
 end
 
 function Library:_CreateMinimizeIcon()
@@ -599,15 +667,20 @@ function Library:_CreateMinimizeIcon()
         Position = UDim2.new(0.5, 0, 0.5, 0),
         Size = UDim2.new(0, iconSize, 0, iconSize),
         Visible = false,
+        ZIndex = 1,
         Parent = self.screenGui
     })
     CreateCorner(self._minimizeIcon, 10)
-    CreateInstance("UIStroke", {
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-        Color = Color3.fromRGB(255, 255, 255),
-        Thickness = 2,
-        Parent = self._minimizeIcon
-    })
+    if not self._rgbEnabled then
+        CreateInstance("UIStroke", {
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+            Color = Color3.fromRGB(255, 255, 255),
+            Thickness = 2,
+            Parent = self._minimizeIcon
+        })
+    else
+        self._iconRgbGlow, self._iconRgbGradient = self:_CreateRGBGlow(self._minimizeIcon, 10, true)
+    end
 
     self._minimizeIconImage = CreateInstance("ImageLabel", {
         Name = "Logo",
