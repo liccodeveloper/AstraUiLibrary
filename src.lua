@@ -785,37 +785,17 @@ function Library:CreateFloatingButton(config)
         Parent = btnFrame
     })
 
-    local dragging = false
-    local dragStart, startPos
+    local tapBtn = CreateInstance("TextButton", {
+        Name = "TapArea",
+        Text = "",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = 1000,
+        Parent = btnFrame
+    })
 
-    btnFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            dragging  = true
-            dragStart = input.Position
-            startPos  = btnFrame.Position
-            Library._activeDragger = function(inp)
-                if dragging then
-                    local delta = inp.Position - dragStart
-                    btnFrame.Position = UDim2.new(
-                        startPos.X.Scale, startPos.X.Offset + delta.X,
-                        startPos.Y.Scale, startPos.Y.Offset + delta.Y
-                    )
-                end
-            end
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    if dragging then
-                        local delta = input.Position - dragStart
-                        if delta.Magnitude < 10 then
-                            callback()
-                        end
-                    end
-                    dragging = false
-                    Library._activeDragger = nil
-                end
-            end)
-        end
+    tapBtn.MouseButton1Click:Connect(function()
+        callback()
     end)
 
     local fabGlow, fabGrad
