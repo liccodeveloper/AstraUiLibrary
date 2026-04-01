@@ -994,7 +994,7 @@ function Library:SetProfile(config)
             TextXAlignment = Enum.TextXAlignment.Left,
             BackgroundTransparency = 1,
             Position = UDim2.new(0, 48, 0, 11),
-            Size = UDim2.new(1, -85, 0, 16),
+            Size = UDim2.new(1, -80, 0, 16),
             TextTruncate = Enum.TextTruncate.AtEnd,
             Parent = profile
         })
@@ -1008,7 +1008,7 @@ function Library:SetProfile(config)
             TextXAlignment = Enum.TextXAlignment.Left,
             BackgroundTransparency = 1,
             Position = UDim2.new(0, 48, 0, 27),
-            Size = UDim2.new(1, -85, 0, 14),
+            Size = UDim2.new(1, -80, 0, 14),
             TextTruncate = Enum.TextTruncate.AtEnd,
             Parent = profile
         })
@@ -1018,7 +1018,7 @@ function Library:SetProfile(config)
             BackgroundTransparency = 1,
             Image = "",
             ImageColor3 = c.TextDark,
-            Position = UDim2.new(1, -34, 0.5, -8),
+            Position = UDim2.new(1, -24, 0.5, -8),
             Size = UDim2.new(0, 16, 0, 16),
             ScaleType = Enum.ScaleType.Fit,
             Parent = profile
