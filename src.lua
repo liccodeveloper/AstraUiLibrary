@@ -938,6 +938,117 @@ function Library:_CreateContentArea()
     CreatePadding(self.contentContainer, 10, 10, 15, 15)
 end
 
+function Library:SetProfile(config)
+    config = config or {}
+    local visible = config.Visible ~= false
+    
+    if not visible then
+        if self._profileFrame then
+            self._profileFrame.Visible = false
+        end
+        if self.sectionsContainer then
+            self.sectionsContainer.Size = UDim2.new(0, 165, 1, 0)
+        end
+        return
+    end
+
+    if not self._profileFrame then
+        self.sectionsContainer.Size = UDim2.new(0, 165, 1, -55)
+        
+        local profile = CreateInstance("Frame", {
+            Name = "ProfileContainer",
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 0, 1, -55),
+            Size = UDim2.new(0, 165, 0, 55),
+            Parent = self.mainContent
+        })
+        self._profileFrame = profile
+        
+        CreateInstance("Frame", {
+            Name = "Separator",
+            BackgroundColor3 = c.Secondary,
+            BorderSizePixel = 0,
+            Position = UDim2.new(0, 5, 0, 0),
+            Size = UDim2.new(1, -10, 0, 1),
+            Parent = profile
+        })
+        
+        local avatar = CreateInstance("ImageLabel", {
+            Name = "Avatar",
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 10, 0.5, -16),
+            Size = UDim2.new(0, 32, 0, 32),
+            Parent = profile
+        })
+        CreateCorner(avatar, 100)
+        
+        pcall(function()
+            local thumb = game:GetService("Players"):GetUserThumbnailAsync(game:GetService("Players").LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailResolution.Size100x100)
+            avatar.Image = thumb
+        end)
+        
+        local nameLabel = CreateInstance("TextLabel", {
+            Name = "NameLabel",
+            FontFace = f.Bold,
+            Text = game:GetService("Players").LocalPlayer.DisplayName,
+            TextColor3 = c.Text,
+            TextSize = textsize.Small,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 48, 0, 11),
+            Size = UDim2.new(1, -78, 0, 16),
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            Parent = profile
+        })
+        
+        local subLabel = CreateInstance("TextLabel", {
+            Name = "SubLabel",
+            FontFace = f.Regular,
+            Text = "",
+            TextColor3 = c.TextDark,
+            TextSize = textsize.Tiny,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 48, 0, 27),
+            Size = UDim2.new(1, -78, 0, 14),
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            Parent = profile
+        })
+        
+        local iconBtn = CreateInstance("ImageButton", {
+            Name = "IconButton",
+            BackgroundTransparency = 1,
+            Image = "",
+            ImageColor3 = c.TextDark,
+            Position = UDim2.new(1, -26, 0.5, -8),
+            Size = UDim2.new(0, 16, 0, 16),
+            Parent = profile
+        })
+        
+        iconBtn.MouseEnter:Connect(function() CreateTween(iconBtn, {ImageColor3 = c.Text}, 0.2) end)
+        iconBtn.MouseLeave:Connect(function() CreateTween(iconBtn, {ImageColor3 = c.TextDark}, 0.2) end)
+        
+        self._profileSubLabel = subLabel
+        self._profileIconBtn = iconBtn
+    end
+    
+    self._profileFrame.Visible = true
+    self.sectionsContainer.Size = UDim2.new(0, 165, 1, -55)
+    
+    local defaultSub = "#" .. string.sub(tostring(game:GetService("Players").LocalPlayer.UserId), 1, 4)
+    self._profileSubLabel.Text = config.SubText or defaultSub
+    self._profileIconBtn.Image = config.Icon or "rbxassetid://10734898126"
+    
+    if self._profileIconConn then
+        self._profileIconConn:Disconnect()
+        self._profileIconConn = nil
+    end
+    
+    if config.IconCallback then
+        self._profileIconConn = self._profileIconBtn.MouseButton1Click:Connect(config.IconCallback)
+    end
+end
+
 function Library:_SetupSmartResize(handle)
     local resizing = false
     local resizeStart, startSize
